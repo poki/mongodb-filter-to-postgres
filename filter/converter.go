@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-var OperatorMap = map[string]string{
+var BasicOperatorMap = map[string]string{
 	"$gt":  ">",
 	"$gte": ">=",
 }
@@ -36,7 +36,7 @@ func (c *Converter) Convert(query []byte) (string, []any, error) {
 		return "", nil, err
 	}
 
-	conditions, values, err := c.convertFilter(mongoFilter)
+	conditions, values, err := c.convertFilter(mongoFilter, 0)
 	if err != nil {
 		return "", nil, err
 	}
@@ -44,7 +44,7 @@ func (c *Converter) Convert(query []byte) (string, []any, error) {
 	return conditions, values, nil
 }
 
-func (c *Converter) convertFilter(filter map[string]any) (string, []any, error) {
+func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string, []any, error) {
 	var conditions []string
 	var values []any
 
@@ -56,31 +56,75 @@ func (c *Converter) convertFilter(filter map[string]any) (string, []any, error) 
 
 	for _, key := range keys {
 		value := filter[key]
-		switch v := value.(type) {
-		case map[string]any:
-			inner := []string{}
-			operators := []string{}
-			for operator := range v {
-				operators = append(operators, operator)
+
+		switch key {
+		case "$or", "$and":
+			orConditions, ok := anyToSliceMapAny(value)
+			if !ok {
+				return "", nil, fmt.Errorf("invalid value for $or operator (must be array of objects): %v", value)
 			}
-			sort.Strings(operators)
-			for _, operator := range operators {
-				value := v[operator]
-				op, ok := OperatorMap[operator]
-				if !ok {
-					return "", nil, fmt.Errorf("unknown operator: %s", operator)
+
+			inner := []string{}
+			for _, orCondition := range orConditions {
+				innerConditions, innerValues, err := c.convertFilter(orCondition, paramIndex)
+				if err != nil {
+					return "", nil, err
 				}
-				inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, len(values)+1))
+				paramIndex += len(innerValues)
+				inner = append(inner, innerConditions)
+				values = append(values, innerValues...)
+			}
+			op := "AND"
+			if key == "$or" {
+				op = "OR"
+			}
+			if len(inner) > 1 {
+				conditions = append(conditions, "("+strings.Join(inner, " "+op+" ")+")")
+			} else {
+				conditions = append(conditions, strings.Join(inner, " "+op+" "))
+			}
+		default:
+			switch v := value.(type) {
+			case map[string]any:
+				inner := []string{}
+				operators := []string{}
+				for operator := range v {
+					operators = append(operators, operator)
+				}
+				sort.Strings(operators)
+				for _, operator := range operators {
+					switch operator {
+					case "$or":
+						return "", nil, fmt.Errorf("$or as scalar operator not supported")
+					case "$and":
+						return "", nil, fmt.Errorf("$and as scalar operator not supported")
+					case "$in":
+						inner = append(inner, fmt.Sprintf("(%s = ANY(?))", c.columnName(key)))
+						if !isScalarSlice(v[operator]) {
+							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
+						}
+						values = append(values, v[operator])
+					default:
+						value := v[operator]
+						op, ok := BasicOperatorMap[operator]
+						if !ok {
+							return "", nil, fmt.Errorf("unknown operator: %s", operator)
+						}
+						paramIndex++
+						inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+						values = append(values, value)
+					}
+				}
+				innerResult := strings.Join(inner, " AND ")
+				if len(inner) > 1 {
+					innerResult = "(" + innerResult + ")"
+				}
+				conditions = append(conditions, innerResult)
+			default:
+				paramIndex++
+				conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), paramIndex))
 				values = append(values, value)
 			}
-			innerResult := strings.Join(inner, " AND ")
-			if len(inner) > 1 {
-				innerResult = "(" + innerResult + ")"
-			}
-			conditions = append(conditions, innerResult)
-		default:
-			conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), len(values)+1))
-			values = append(values, value)
 		}
 	}
 

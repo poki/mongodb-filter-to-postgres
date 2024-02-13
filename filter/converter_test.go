@@ -1,6 +1,7 @@
 package filter_test
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
@@ -76,8 +77,80 @@ func TestConverter_Convert(t *testing.T) {
 			"in-array operator simple",
 			nil,
 			`{"status": {"$in": ["NEW", "OPEN"]}}`,
-			`("status" IN ($1, $2))`,
-			[]any{"NEW", "OPEN"},
+			`("status" = ANY(?))`,
+			[]any{[]any{"NEW", "OPEN"}},
+			nil,
+		},
+		{
+			"in-array operator invalid value",
+			nil,
+			`{"status": {"$in": [{"hacker": 1}, "OPEN"]}}`,
+			``,
+			nil,
+			fmt.Errorf("invalid value for $in operator (must array of primatives): [map[hacker:1] OPEN]"),
+		},
+		{
+			"in-array operator scalar value",
+			nil,
+			`{"status": {"$in": "text"}}`,
+			``,
+			nil,
+			fmt.Errorf("invalid value for $in operator (must array of primatives): text"),
+		},
+		{
+			"in-array operator with null value",
+			nil,
+			`{"status": {"$in": ["guest", null]}}`,
+			`("status" = ANY(?))`,
+			[]any{[]any{"guest", nil}},
+			nil,
+		},
+		{
+			"or operator basic",
+			nil,
+			`{"$or": [{"name": "John"}, {"name": "Doe"}]}`,
+			`(("name" = $1) OR ("name" = $2))`,
+			[]any{"John", "Doe"},
+			nil,
+		},
+		{
+			"or operator complex",
+			nil,
+			`{"$or": [{"org": "poki", "admin": true}, {"age": {"$gte": 18}}]}`,
+			`((("admin" = $1) AND ("org" = $2)) OR ("age" >= $3))`,
+			[]any{true, "poki", float64(18)},
+			nil,
+		},
+		{
+			"nested or",
+			nil,
+			`{"$or": [{"$or": [{"name": "John"}, {"name": "Doe"}]}, {"name": "Jane"}]}`,
+			`((("name" = $1) OR ("name" = $2)) OR ("name" = $3))`,
+			[]any{"John", "Doe", "Jane"},
+			nil,
+		},
+		{
+			"or in the wrong place",
+			nil,
+			`{"foo": { "$or": [ "bar", "baz" ] }}`,
+			``,
+			nil,
+			fmt.Errorf("$or as scalar operator not supported"),
+		},
+		{
+			"and operator basic",
+			nil,
+			`{"$and": [{"name": "John"}, {"version": 3}]}`,
+			`(("name" = $1) AND ("version" = $2))`,
+			[]any{"John", float64(3)},
+			nil,
+		},
+		{
+			"and operator in one object",
+			nil,
+			`{"$and": [{"name": "John", "version": 3}]}`,
+			`(("name" = $1) AND ("version" = $2))`,
+			[]any{"John", float64(3)},
 			nil,
 		},
 	}
@@ -85,8 +158,12 @@ func TestConverter_Convert(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			c := filter.NewConverter(tt.option)
 			conditions, values, err := c.Convert([]byte(tt.input))
-			if err != tt.err {
+			if err != nil && (tt.err == nil || err.Error() != tt.err.Error()) {
 				t.Errorf("Converter.Convert() error = %v, wantErr %v", err, tt.err)
+				return
+			}
+			if err == nil && tt.err != nil {
+				t.Errorf("Converter.Convert() error = nil, wantErr %v", tt.err)
 				return
 			}
 			if conditions != tt.conditions {
