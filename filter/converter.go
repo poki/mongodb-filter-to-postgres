@@ -64,13 +64,16 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 
 		switch key {
 		case "$or", "$and":
-			orConditions, ok := anyToSliceMapAny(value)
+			opConditions, ok := anyToSliceMapAny(value)
 			if !ok {
 				return "", nil, fmt.Errorf("invalid value for $or operator (must be array of objects): %v", value)
 			}
+			if len(opConditions) == 0 {
+				return "", nil, fmt.Errorf("empty arrays not allowed")
+			}
 
 			inner := []string{}
-			for _, orCondition := range orConditions {
+			for _, orCondition := range opConditions {
 				innerConditions, innerValues, err := c.convertFilter(orCondition, paramIndex)
 				if err != nil {
 					return "", nil, err
@@ -89,8 +92,16 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				conditions = append(conditions, strings.Join(inner, " "+op+" "))
 			}
 		default:
+			if !isValidPostgresIdentifier(key) {
+				return "", nil, fmt.Errorf("invalid column name: %s", key)
+			}
+
 			switch v := value.(type) {
 			case map[string]any:
+				if len(v) == 0 {
+					return "", nil, fmt.Errorf("empty objects not allowed")
+				}
+
 				inner := []string{}
 				operators := []string{}
 				for operator := range v {
@@ -104,7 +115,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					case "$and":
 						return "", nil, fmt.Errorf("$and as scalar operator not supported")
 					case "$in":
-						inner = append(inner, fmt.Sprintf("(%s = ANY(?))", c.columnName(key)))
+						paramIndex++
+						inner = append(inner, fmt.Sprintf("(%s = ANY($%d))", c.columnName(key), paramIndex))
 						if !isScalarSlice(v[operator]) {
 							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
 						}
