@@ -8,8 +8,13 @@ import (
 )
 
 var BasicOperatorMap = map[string]string{
-	"$gt":  ">",
-	"$gte": ">=",
+	"$gt":    ">",
+	"$gte":   ">=",
+	"$lt":    "<",
+	"$lte":   "<=",
+	"$eq":    "=",
+	"$ne":    "!=",
+	"$regex": "~*",
 }
 
 type Converter struct {

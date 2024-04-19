@@ -21,8 +21,8 @@ func ExampleNewConverter() {
 	}
 
 	fmt.Println(conditions)
-	fmt.Println(values)
+	fmt.Printf("%#v\n", values)
 	// Output:
-	// "meta"->>'name' = $1 AND "created_at" >= $2
-	// [John 2020-01-01T00:00:00Z]
+	// (("created_at" >= $1) AND ("meta"->>'name' = $2))
+	// []interface {}{"2020-01-01T00:00:00Z", "John"}
 }

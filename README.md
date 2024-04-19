@@ -13,8 +13,8 @@ Let's filter some lobbies in a multiplayer game:
   "$and": [
     {
       "$or": [                                // match two maps
-        { "map": { "$contains": "aztec" } },
-        { "map": { "$contains": "nuke" } }
+        { "map": { "$regex": "aztec" } },
+        { "map": { "$regex": "nuke" } }
       ]
     },
     { "password": "" },                       // no password set
@@ -27,15 +27,15 @@ Let's filter some lobbies in a multiplayer game:
 Converts to:
 ```sql
 (
-  "customdata"->>"map" LIKE ?
+  "customdata"->>"map" ~* $1
   OR
-  "customdata"->>"map" LIKE ?
-) 
-AND "password" = ? 
+  "customdata"->>"map" ~* $2
+)
+AND "password" = $3
 AND (
-  "playerCount" >= ?
+  "playerCount" >= $4
   AND
-  "playerCount" < ?
+  "playerCount" < $5
 )
 ```
 And values:

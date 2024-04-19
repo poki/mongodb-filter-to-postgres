@@ -153,6 +153,22 @@ func TestConverter_Convert(t *testing.T) {
 			[]any{"John", float64(3)},
 			nil,
 		},
+		{
+			"basic contains operator",
+			nil,
+			`{"name": {"$regex": "John"}}`,
+			`("name" ~* $1)`,
+			[]any{"John"},
+			nil,
+		},
+		{
+			"complex contains operator",
+			nil,
+			`{"$or": [{"name": {"$regex": "John"}}, {"name": {"$regex": "Jane"}}]}`,
+			`(("name" ~* $1) OR ("name" ~* $2))`,
+			[]any{"John", "Jane"},
+			nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
