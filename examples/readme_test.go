@@ -6,7 +6,7 @@ import (
 	"github.com/poki/mongodb-filter-to-postgres/filter"
 )
 
-func ExampleNewConverter_README() {
+func ExampleNewConverter_readme() {
 	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
 	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
 
