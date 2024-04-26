@@ -1,4 +1,4 @@
-package filter_test
+package fuzz
 
 import (
 	"strings"
