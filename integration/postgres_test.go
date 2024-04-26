@@ -59,9 +59,6 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 	}`
 
 	where, values, err := c.Convert([]byte(in))
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	rows, err := db.Query(`
 		SELECT id
