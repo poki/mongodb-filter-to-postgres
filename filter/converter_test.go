@@ -21,7 +21,7 @@ func TestConverter_Convert(t *testing.T) {
 			"flat single value",
 			nil,
 			`{"name": "John"}`,
-			`("name" = $1`,
+			`("name" = $1)`,
 			[]any{"John"},
 			nil,
 		},
