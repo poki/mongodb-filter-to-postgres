@@ -4,8 +4,10 @@ import (
 	"strings"
 	"testing"
 
-	pg_query "github.com/pganalyze/pg_query_go/v5"
+	"github.com/lib/pq"
 	"github.com/poki/mongodb-filter-to-postgres/filter"
+
+	pg_query "github.com/pganalyze/pg_query_go/v5"
 )
 
 func FuzzConverter(f *testing.F) {
@@ -37,7 +39,7 @@ func FuzzConverter(f *testing.F) {
 	}
 
 	f.Fuzz(func(t *testing.T, in string) {
-		c := filter.NewConverter()
+		c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
 		where, _, err := c.Convert([]byte(in))
 		if err == nil && where != "" {
 			j, err := pg_query.ParseToJSON("SELECT * FROM test WHERE 1 AND " + where)

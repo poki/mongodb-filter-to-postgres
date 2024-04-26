@@ -7,6 +7,7 @@ import (
 )
 
 func ExampleNewConverter_README() {
+	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
 	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
 
 	mongoFilterQuery := `{
@@ -25,8 +26,8 @@ func ExampleNewConverter_README() {
 	}`
 	conditions, values, err := converter.Convert([]byte(mongoFilterQuery))
 	if err != nil {
-		panic(err)
 		// handle error
+		panic(err)
 	}
 
 	fmt.Println(conditions)

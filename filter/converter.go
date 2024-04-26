@@ -1,6 +1,8 @@
 package filter
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"sort"
@@ -20,9 +22,15 @@ var BasicOperatorMap = map[string]string{
 type Converter struct {
 	nestedColumn     string
 	nestedExemptions []string
+	arrayDriver      func(a any) interface {
+		driver.Valuer
+		sql.Scanner
+	}
 }
 
 // NewConverter creates a new Converter with optional nested JSONB field mapping.
+//
+// Note: When using github.com/lib/pq, the filter.WithArrayDriver should be set to pq.Array.
 func NewConverter(options ...Option) *Converter {
 	converter := &Converter{}
 	for _, option := range options {
@@ -115,10 +123,13 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					case "$and":
 						return "", nil, fmt.Errorf("$and as scalar operator not supported")
 					case "$in":
-						paramIndex++
-						inner = append(inner, fmt.Sprintf("(%s = ANY($%d))", c.columnName(key), paramIndex))
 						if !isScalarSlice(v[operator]) {
 							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
+						}
+						paramIndex++
+						inner = append(inner, fmt.Sprintf("(%s = ANY($%d))", c.columnName(key), paramIndex))
+						if c.arrayDriver != nil {
+							v[operator] = c.arrayDriver(v[operator])
 						}
 						values = append(values, v[operator])
 					default:

@@ -2,20 +2,16 @@ package integration
 
 import (
 	"context"
-	"database/sql"
-	"fmt"
 	"reflect"
 	"testing"
-	"time"
 
-	_ "github.com/lib/pq"
-	"github.com/ory/dockertest/v3"
-	"github.com/ory/dockertest/v3/docker"
+	"github.com/lib/pq"
 	"github.com/poki/mongodb-filter-to-postgres/filter"
 )
 
 func TestIntegration_ReadmeExample(t *testing.T) {
-	db := SetupDatabase(t)
+	db := setupPQ(t)
+
 	if _, err := db.Exec(`
 		CREATE TABLE lobbies (
 			"id" serial PRIMARY KEY,
@@ -43,7 +39,10 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := filter.NewConverter(filter.WithNestedJSONB("customData", "password", "playerCount"))
+	c := filter.NewConverter(
+		filter.WithArrayDriver(pq.Array),
+		filter.WithNestedJSONB("customData", "password", "playerCount"),
+	)
 	in := `{
 		"$and": [
 			{
@@ -90,65 +89,131 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 	}
 }
 
-func SetupDatabase(t *testing.T) *sql.DB {
-	t.Helper()
+func TestIntegration_InAny_PQ(t *testing.T) {
+	db := setupPQ(t)
 
-	pool, err := dockertest.NewPool("")
+	if _, err := db.Exec(`
+		CREATE TABLE users (
+			"id" serial PRIMARY KEY,
+			"name" text,
+			"role" text
+		);
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO users ("id", "name", "role")
+		VALUES
+			(1, 'Alice', 'admin'),
+			(2, 'Bob', 'admin'),
+			(3, 'Charlie', 'guest'),
+			(4, 'David', 'user'),
+			(5, 'Eve', 'user'),
+			(6, 'Frank', 'guest'),
+			(7, 'Grace', 'user'),
+			(8, 'Hank', 'user'),
+			(9, 'Ivy', 'guest'),
+			(10, 'Jack', 'user')
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+	in := `{
+		"role": { "$in": ["guest", "user"] }
+	}`
+	where, values, err := c.Convert([]byte(in))
 	if err != nil {
-		t.Fatalf("Could not construct pool: %s", err)
+		t.Fatal(err)
 	}
 
-	err = pool.Client.Ping()
+	rows, err := db.Query(`
+		SELECT id
+		FROM users
+		WHERE `+where+`;
+	`, values...)
 	if err != nil {
-		t.Fatalf("Could not connect to Docker: %s", err)
+		t.Fatal(err)
 	}
-	resource, err := pool.RunWithOptions(&dockertest.RunOptions{
-		Repository: "postgres",
-		Tag:        "15-alpine",
-		Env: []string{
-			"POSTGRES_PASSWORD=test",
-			"POSTGRES_USER=test",
-			"POSTGRES_DB=test",
-			"listen_addresses='*'",
-			"fsync='off'",
-			"full_page_writes='off'",
-		},
-	}, func(config *docker.HostConfig) {
-		config.AutoRemove = true
-		config.RestartPolicy = docker.RestartPolicy{Name: "no"}
-	})
+	defer rows.Close()
+	ids := []int{}
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
+		}
+		ids = append(ids, id)
+	}
+
+	if len(ids) != 8 {
+		t.Fatalf("expected 8 rows, got %d", len(ids))
+	}
+	if !reflect.DeepEqual(ids, []int{3, 4, 5, 6, 7, 8, 9, 10}) {
+		t.Fatalf("expected [3, 4, 5, 6, 7, 8, 9, 10], got %v", ids)
+	}
+}
+
+func TestIntegration_InAny_PGX(t *testing.T) {
+	db := setupPGX(t)
+
+	ctx := context.Background()
+	if _, err := db.Exec(ctx, `
+		CREATE TABLE users (
+			"id" serial PRIMARY KEY,
+			"name" text,
+			"role" text
+		);
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(ctx, `
+		INSERT INTO users ("id", "name", "role")
+		VALUES
+			(1, 'Alice', 'admin'),
+			(2, 'Bob', 'admin'),
+			(3, 'Charlie', 'guest'),
+			(4, 'David', 'user'),
+			(5, 'Eve', 'user'),
+			(6, 'Frank', 'guest'),
+			(7, 'Grace', 'user'),
+			(8, 'Hank', 'user'),
+			(9, 'Ivy', 'guest'),
+			(10, 'Jack', 'user')
+	`); err != nil {
+		t.Fatal(err)
+	}
+
+	c := filter.NewConverter()
+	in := `{
+		"role": { "$in": ["guest", "user"] }
+	}`
+	where, values, err := c.Convert([]byte(in))
 	if err != nil {
-		t.Fatalf("Could not start resource: %s", err)
-	}
-	resource.Expire(120) //nolint:errcheck
-
-	hostAndPort := resource.GetHostPort("5432/tcp")
-	databaseUrl := fmt.Sprintf("postgres://test:test@%s/test?sslmode=disable", hostAndPort)
-
-	var db *sql.DB
-	pool.MaxWait = 120 * time.Second
-	if err = pool.Retry(func() error {
-		db, err = sql.Open("postgres", databaseUrl)
-		if err != nil {
-			return err
-		}
-		ctx, cancel := context.WithTimeout(context.Background(), 12*time.Second)
-		defer cancel()
-		return db.PingContext(ctx)
-	}); err != nil {
-		t.Fatalf("Could not connect to docker: %s", err)
+		t.Fatal(err)
 	}
 
-	t.Cleanup(func() {
-		if err := pool.Purge(resource); err != nil {
-			t.Fatalf("Could not purge resource: %s", err)
+	rows, err := db.Query(ctx, `
+		SELECT id
+		FROM users
+		WHERE `+where+`;
+	`, values...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	ids := []int{}
+	for rows.Next() {
+		var id int
+		if err := rows.Scan(&id); err != nil {
+			t.Fatal(err)
 		}
-	})
-	t.Cleanup(func() {
-		if err := db.Close(); err != nil {
-			t.Fatalf("Could not close database: %s", err)
-		}
-	})
+		ids = append(ids, id)
+	}
 
-	return db
+	if len(ids) != 8 {
+		t.Fatalf("expected 8 rows, got %d", len(ids))
+	}
+	if !reflect.DeepEqual(ids, []int{3, 4, 5, 6, 7, 8, 9, 10}) {
+		t.Fatalf("expected [3, 4, 5, 6, 7, 8, 9, 10], got %v", ids)
+	}
 }
