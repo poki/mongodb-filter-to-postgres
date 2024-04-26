@@ -1,6 +1,6 @@
 module github.com/poki/mongodb-filter-to-postgres/fuzz
 
-go 1.21.0
+go 1.22.2
 
 replace github.com/poki/mongodb-filter-to-postgres v0.0.0 => ../
 
