@@ -39,3 +39,13 @@ func WithArrayDriver(f func(a any) interface {
 		c.arrayDriver = f
 	}
 }
+
+// WithEmptyCondition is an option to specify the condition to be used when the
+// input query filter is empty. (e.g. you have a query with no conditions)
+//
+// The default value is `FALSE`, because it's the safer choice in most cases.
+func WithEmptyCondition(condition string) Option {
+	return func(c *Converter) {
+		c.emptyCondition = condition
+	}
+}

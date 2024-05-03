@@ -293,8 +293,8 @@ func TestIntegration_BasicOperators(t *testing.T) {
 		},
 		{
 			`empty object`,
-			`{}`,
-			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			`{}`, // Should return FALSE as the condition.
+			[]int{},
 			nil,
 		},
 	}

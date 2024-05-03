@@ -197,7 +197,7 @@ func TestConverter_Convert(t *testing.T) {
 			"empty filter",
 			nil,
 			`{}`,
-			`TRUE`,
+			`FALSE`,
 			[]any{},
 			nil,
 		}, {
@@ -258,5 +258,19 @@ func TestConverter_Convert_startAtParameterIndex(t *testing.T) {
 	_, _, err = c.Convert([]byte(`{"name": "John"}`), 1234551231231231231)
 	if err != nil {
 		t.Errorf("Converter.Convert(..., 1234551231231231231) error = %v, want nil", err)
+	}
+}
+
+func TestConverter_WithEmptyCondition(t *testing.T) {
+	c := filter.NewConverter(filter.WithEmptyCondition("TRUE"))
+	conditions, values, err := c.Convert([]byte(`{}`), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "TRUE"; conditions != want {
+		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
+	}
+	if len(values) != 0 {
+		t.Errorf("Converter.Convert() values = %v, want nil", values)
 	}
 }

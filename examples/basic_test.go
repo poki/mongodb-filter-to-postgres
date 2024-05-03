@@ -30,7 +30,7 @@ func ExampleNewConverter() {
 }
 
 func ExampleNewConverter_emptyfilter() {
-	converter := filter.NewConverter()
+	converter := filter.NewConverter(filter.WithEmptyCondition("TRUE")) // The default is FALSE if you don't change it.
 
 	mongoFilterQuery := `{}`
 	conditions, _, err := converter.Convert([]byte(mongoFilterQuery), 1)

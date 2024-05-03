@@ -26,13 +26,16 @@ type Converter struct {
 		driver.Valuer
 		sql.Scanner
 	}
+	emptyCondition string
 }
 
 // NewConverter creates a new Converter with optional nested JSONB field mapping.
 //
 // Note: When using github.com/lib/pq, the filter.WithArrayDriver should be set to pq.Array.
 func NewConverter(options ...Option) *Converter {
-	converter := &Converter{}
+	converter := &Converter{
+		emptyCondition: "FALSE",
+	}
 	for _, option := range options {
 		if option != nil {
 			option(converter)
@@ -57,7 +60,7 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 	}
 
 	if len(mongoFilter) == 0 {
-		return "TRUE", []any{}, nil
+		return c.emptyCondition, []any{}, nil
 	}
 
 	conditions, values, err = c.convertFilter(mongoFilter, startAtParameterIndex)
