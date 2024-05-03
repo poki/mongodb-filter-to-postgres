@@ -29,6 +29,20 @@ func ExampleNewConverter() {
 	// []interface {}{"2020-01-01T00:00:00Z", "John"}
 }
 
+func ExampleNewConverter_emptyfilter() {
+	converter := filter.NewConverter(filter.WithEmptyCondition("TRUE")) // The default is FALSE if you don't change it.
+
+	mongoFilterQuery := `{}`
+	conditions, _, err := converter.Convert([]byte(mongoFilterQuery), 1)
+	if err != nil {
+		// handle error
+	}
+
+	fmt.Println(conditions)
+	// Output:
+	// TRUE
+}
+
 func ExampleNewConverter_nonIsolatedConditions() {
 	converter := filter.NewConverter()
 

@@ -291,6 +291,12 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			nil,
 			errors.New("pq: invalid input syntax for type integer: \"town1\""),
 		},
+		{
+			`empty object`,
+			`{}`, // Should return FALSE as the condition.
+			[]int{},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
