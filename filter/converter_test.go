@@ -193,6 +193,21 @@ func TestConverter_Convert(t *testing.T) {
 			[]any{[]any{}},
 			nil,
 		},
+		{
+			"empty filter",
+			nil,
+			`{}`,
+			`TRUE`,
+			[]any{},
+			nil,
+		}, {
+			"empty or conditions",
+			nil,
+			`{"$or": [{}, {}]}`,
+			``,
+			nil,
+			fmt.Errorf("empty objects not allowed"),
+		},
 	}
 
 	for _, tt := range tests {

@@ -56,6 +56,10 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 		return "", nil, err
 	}
 
+	if len(mongoFilter) == 0 {
+		return "TRUE", []any{}, nil
+	}
+
 	conditions, values, err = c.convertFilter(mongoFilter, startAtParameterIndex)
 	if err != nil {
 		return "", nil, err
@@ -67,6 +71,10 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string, []any, error) {
 	var conditions []string
 	var values []any
+
+	if len(filter) == 0 {
+		return "", nil, fmt.Errorf("empty objects not allowed")
+	}
 
 	keys := []string{}
 	for key := range filter {
