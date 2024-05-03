@@ -1,13 +1,61 @@
 # mongodb-filter-to-postgres
 
-A simple package that converts a [Mongodb Query Filter](https://www.mongodb.com/docs/compass/current/query/filter)
-to a Postgres WHERE clause. Aiming to be simple and safe.
+This package converts [MongoDB query filters](https://www.mongodb.com/docs/compass/current/query/filter) into PostgreSQL WHERE clauses.  
+_It's designed to be simple, secure, and free of dependencies._
 
-**Project State:** Just a rough sketch and playground for Erik and Koen.
+### Why Use This Package?
+When filtering data based on user-generated inputs, you need a syntax that's both intuitive and reliable. MongoDB's query filter is an excellent choice because it's simple, widely understood, and battle-tested in real-world applications. Although this package doesn't interact with MongoDB, it uses the same syntax to simplify filtering.
 
-## Example:
+### Supported Features:
+- Basics: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$regex`
+- Logical operators: `$and`, `$or`
+- Array operators: `$in`
 
-Let's filter some lobbies in a multiplayer game:
+This package is intended for use with PostgreSQL drivers like [github.com/lib/pq](https://github.com/lib/pq) and [github.com/jackc/pgx](https://github.com/jackc/pgx). However, it can work with any driver that supports the database/sql package.
+
+
+## Basic Usage:
+
+Install the package in your project:
+```sh
+go get -u github.com/poki/mongodb-filter-to-postgres
+```
+
+Basic example:
+```go
+import (
+  "github.com/poki/mongodb-filter-to-postgres/filter"
+
+  "github.com/lib/pq" // also works with github.com/jackc/pgx
+)
+
+func main() {
+  // Create a converter with options:
+  // - WithArrayDriver: to convert arrays to the correct driver type, required when using lib/pq
+  converter := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+
+  // Convert a filter query to a WHERE clause and values:
+  input := []byte(`{"title": "Jurassic Park"}`)
+  where, values, err := converter.Convert(input)
+  if err != nil {
+    // handle error
+  }
+  fmt.Println(where, values) // ("title" = $1), ["Jurassic Park"]
+
+  db, _ := sql.Open("postgres", "...")
+  db.QueryRow("SELECT * FROM movies WHERE " + where, values...)
+}
+```
+(See [examples/](examples/) for more examples)
+
+
+## Complex filter example:
+
+This project was created and designed for the
+[poki/netlib](https://github.com/poki/netlib) project, where we needed to
+convert complex filters from the API to SQL queries. The following example
+shows a complex filter and how it is converted to a WHERE clause and values:
+
 ```json5
 {
   "$and": [
@@ -38,8 +86,17 @@ AND (
   "playerCount" < $5
 )
 ```
-And values:
 ```go
-values := []any{"%aztec%", "%nuke%", "", 2, 10}
+values := []any{"aztec", "nuke", "", 2, 10}
 ```
-(given "map" is confugired to be in a jsonb column)
+(given "customdata" is configured with `filter.WithNestedJSONB("customdata", "password", "playerCount")`)
+
+
+## Contributing
+
+If you have a feature request or discovered a bug, we'd love to hear from you! Please open an issue or submit a pull request. This project adheres to the [Poki Vulnerability Disclosure Policy](https://poki.com/en/c/vulnerability-disclosure-policy).
+
+## Main Contributors
+
+- [Koen Bollen](https://github.com/koenbollen)
+- [Erik Dubbelboer](https://github.com/erikdubbelboer)
