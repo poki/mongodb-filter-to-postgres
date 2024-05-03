@@ -103,3 +103,36 @@ func setupDatabase(t *testing.T, connect func(string) error) {
 		}
 	})
 }
+
+// createPlayersTable create a players table with 10 players.
+func createPlayersTable(t *testing.T, db *sql.DB) {
+	t.Helper()
+
+	if _, err := db.Exec(`
+		CREATE TABLE players (
+			"id" serial PRIMARY KEY,
+			"name" text,
+			"metadata" jsonb,
+			"level" int,
+			"class" text
+		);
+	`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`
+		INSERT INTO players ("id", "name", "metadata", "level", "class")
+		VALUES
+			(1, 'Alice', '{"guild_id": 20, "pet": "dog"}', 10, 'warrior'),
+			(2, 'Bob', '{"guild_id": 20, "pet": "cat"}', 20, 'mage'),
+			(3, 'Charlie', '{"guild_id": 30, "pet": "dog"}', 30, 'rogue'),
+			(4, 'David', '{"guild_id": 30, "pet": "cat"}', 40, 'warrior'),
+			(5, 'Eve', '{"guild_id": 40, "pet": "dog"}', 50, 'mage'),
+			(6, 'Frank', '{"guild_id": 40, "pet": "cat"}', 60, 'rogue'),
+			(7, 'Grace', '{"guild_id": 50, "pet": "dog"}', 70, 'warrior'),
+			(8, 'Hank', '{"guild_id": 50, "pet": "cat"}', 80, 'mage'),
+			(9, 'Ivy', '{"guild_id": 60, "pet": "dog"}', 90, 'rogue'),
+			(10, 'Jack', '{"guild_id": 60, "pet": "cat"}', 100, 'warrior')
+	`); err != nil {
+		t.Fatal(err)
+	}
+}
