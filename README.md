@@ -36,14 +36,14 @@ func main() {
 
   // Convert a filter query to a WHERE clause and values:
   input := []byte(`{"title": "Jurassic Park"}`)
-  where, values, err := converter.Convert(input)
+  conditions, values, err := converter.Convert(input, 1) // 1 is the starting index for params, $1, $2, ...
   if err != nil {
     // handle error
   }
-  fmt.Println(where, values) // ("title" = $1), ["Jurassic Park"]
+  fmt.Println(conditions, values) // ("title" = $1), ["Jurassic Park"]
 
   db, _ := sql.Open("postgres", "...")
-  db.QueryRow("SELECT * FROM movies WHERE " + where, values...)
+  db.QueryRow("SELECT * FROM movies WHERE " + conditions, values...)
 }
 ```
 (See [examples/](examples/) for more examples)

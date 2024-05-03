@@ -24,7 +24,7 @@ func ExampleNewConverter_readme() {
 			}
 		]
 	}`
-	conditions, values, err := converter.Convert([]byte(mongoFilterQuery))
+	conditions, values, err := converter.Convert([]byte(mongoFilterQuery), 1)
 	if err != nil {
 		// handle error
 		panic(err)

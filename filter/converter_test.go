@@ -194,10 +194,11 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 		},
 	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := filter.NewConverter(tt.option)
-			conditions, values, err := c.Convert([]byte(tt.input))
+			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil && (tt.err == nil || err.Error() != tt.err.Error()) {
 				t.Errorf("Converter.Convert() error = %v, wantErr %v", err, tt.err)
 				return
@@ -213,5 +214,34 @@ func TestConverter_Convert(t *testing.T) {
 				t.Errorf("Converter.Convert() values:\n%#v\nwant:\n%#v", values, tt.values)
 			}
 		})
+	}
+}
+
+func TestConverter_Convert_startAtParameterIndex(t *testing.T) {
+	c := filter.NewConverter()
+	conditions, values, err := c.Convert([]byte(`{"name": "John", "password": "secret"}`), 10)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `(("name" = $10) AND ("password" = $11))`; conditions != want {
+		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
+	}
+	if !reflect.DeepEqual(values, []any{"John", "secret"}) {
+		t.Errorf("Converter.Convert() values = %v, want %v", values, []any{"John"})
+	}
+
+	_, _, err = c.Convert([]byte(`{"name": "John"}`), 0)
+	if want := "startAtParameterIndex must be greater than 0"; err == nil || err.Error() != want {
+		t.Errorf("Converter.Convert(..., 0) error = nil, wantErr %q", want)
+	}
+
+	_, _, err = c.Convert([]byte(`{"name": "John"}`), -123)
+	if want := "startAtParameterIndex must be greater than 0"; err == nil || err.Error() != want {
+		t.Errorf("Converter.Convert(..., -123) error = nil, wantErr %q", want)
+	}
+
+	_, _, err = c.Convert([]byte(`{"name": "John"}`), 1234551231231231231)
+	if err != nil {
+		t.Errorf("Converter.Convert(..., 1234551231231231231) error = %v, want nil", err)
 	}
 }
