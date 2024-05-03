@@ -42,14 +42,21 @@ func NewConverter(options ...Option) *Converter {
 }
 
 // Convert converts a MongoDB filter query into SQL conditions and values.
-func (c *Converter) Convert(query []byte) (string, []any, error) {
+//
+// startAtParameterIndex is the index to start the parameter numbering at.
+// Passing X will make the first indexed parameter $X, the second $X+1, and so on.
+func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions string, values []any, err error) {
+	if startAtParameterIndex < 1 {
+		return "", nil, fmt.Errorf("startAtParameterIndex must be greater than 0")
+	}
+
 	var mongoFilter map[string]any
-	err := json.Unmarshal(query, &mongoFilter)
+	err = json.Unmarshal(query, &mongoFilter)
 	if err != nil {
 		return "", nil, err
 	}
 
-	conditions, values, err := c.convertFilter(mongoFilter, 0)
+	conditions, values, err = c.convertFilter(mongoFilter, startAtParameterIndex)
 	if err != nil {
 		return "", nil, err
 	}
@@ -126,8 +133,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						if !isScalarSlice(v[operator]) {
 							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
 						}
-						paramIndex++
 						inner = append(inner, fmt.Sprintf("(%s = ANY($%d))", c.columnName(key), paramIndex))
+						paramIndex++
 						if c.arrayDriver != nil {
 							v[operator] = c.arrayDriver(v[operator])
 						}
@@ -138,8 +145,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						if !ok {
 							return "", nil, fmt.Errorf("unknown operator: %s", operator)
 						}
-						paramIndex++
 						inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+						paramIndex++
 						values = append(values, value)
 					}
 				}
@@ -149,8 +156,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				}
 				conditions = append(conditions, innerResult)
 			default:
-				paramIndex++
 				conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), paramIndex))
+				paramIndex++
 				values = append(values, value)
 			}
 		}

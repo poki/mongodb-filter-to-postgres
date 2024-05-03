@@ -1,6 +1,7 @@
 package examples
 
 import (
+	"database/sql"
 	"fmt"
 
 	"github.com/poki/mongodb-filter-to-postgres/filter"
@@ -16,7 +17,7 @@ func ExampleNewConverter() {
 			"$gte": "2020-01-01T00:00:00Z"
 		}
 	}`
-	conditions, values, err := converter.Convert([]byte(mongoFilterQuery))
+	conditions, values, err := converter.Convert([]byte(mongoFilterQuery), 1)
 	if err != nil {
 		// handle error
 	}
@@ -26,4 +27,38 @@ func ExampleNewConverter() {
 	// Output:
 	// (("created_at" >= $1) AND ("meta"->>'name' = $2))
 	// []interface {}{"2020-01-01T00:00:00Z", "John"}
+}
+
+func ExampleNewConverter_nonIsolatedConditions() {
+	converter := filter.NewConverter()
+
+	mongoFilterQuery := `{
+		"$or": [
+			{ "email": "johndoe@example.org" },
+			{ "name": {"$regex": "^John.*^" },
+		]
+	}`
+	conditions, values, err := converter.Convert([]byte(mongoFilterQuery), 3)
+	if err != nil {
+		// handle error
+	}
+
+	query := `
+		SELECT *
+		FROM users
+		WHERE
+			disabled_at IS NOT NULL
+			AND role = $1
+			AND verified_at > $2
+			AND ` + conditions + `
+		LIMIT 10
+	`
+
+	role := "user"
+	verifiedAt := "2020-01-01T00:00:00Z"
+	values = append([]any{role, verifiedAt}, values...)
+
+	db, _ := sql.Open("postgres", "...")
+	rows := db.QueryRow(query, values...)
+	_ = rows // actually use rows
 }

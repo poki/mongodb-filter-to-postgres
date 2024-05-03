@@ -40,15 +40,15 @@ func FuzzConverter(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, in string) {
 		c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
-		where, _, err := c.Convert([]byte(in))
-		if err == nil && where != "" {
-			j, err := pg_query.ParseToJSON("SELECT * FROM test WHERE 1 AND " + where)
+		conditions, _, err := c.Convert([]byte(in), 1)
+		if err == nil && conditions != "" {
+			j, err := pg_query.ParseToJSON("SELECT * FROM test WHERE 1 AND " + conditions)
 			if err != nil {
-				t.Fatalf("%q %q %v", in, where, err)
+				t.Fatalf("%q %q %v", in, conditions, err)
 			}
 
 			if strings.Contains(j, "CommentStmt") {
-				t.Fatal(where, "CommentStmt found")
+				t.Fatal(conditions, "CommentStmt found")
 			}
 		}
 	})

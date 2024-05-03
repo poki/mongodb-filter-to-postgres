@@ -60,7 +60,7 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 		]
 	}`
 
-	where, values, err := c.Convert([]byte(in))
+	conditions, values, err := c.Convert([]byte(in), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +68,7 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 	rows, err := db.Query(`
 		SELECT id
 		FROM lobbies
-		WHERE `+where+`;
+		WHERE `+conditions+`;
 	`, values...)
 	if err != nil {
 		t.Fatal(err)
@@ -124,7 +124,7 @@ func TestIntegration_InAny_PQ(t *testing.T) {
 	in := `{
 		"role": { "$in": ["guest", "user"] }
 	}`
-	where, values, err := c.Convert([]byte(in))
+	conditions, values, err := c.Convert([]byte(in), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -132,7 +132,7 @@ func TestIntegration_InAny_PQ(t *testing.T) {
 	rows, err := db.Query(`
 		SELECT id
 		FROM users
-		WHERE `+where+`;
+		WHERE `+conditions+`;
 	`, values...)
 	if err != nil {
 		t.Fatal(err)
@@ -189,7 +189,7 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 	in := `{
 		"role": { "$in": ["guest", "user"] }
 	}`
-	where, values, err := c.Convert([]byte(in))
+	conditions, values, err := c.Convert([]byte(in), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -197,7 +197,7 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 	rows, err := db.Query(ctx, `
 		SELECT id
 		FROM users
-		WHERE `+where+`;
+		WHERE `+conditions+`;
 	`, values...)
 	if err != nil {
 		t.Fatal(err)
@@ -296,7 +296,7 @@ func TestIntegration_BasicOperators(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
-			where, values, err := c.Convert([]byte(tt.input))
+			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -304,7 +304,7 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			rows, err := db.Query(`
 				SELECT id
 				FROM players
-				WHERE `+where+`;
+				WHERE `+conditions+`;
 			`, values...)
 			if err != nil {
 				if tt.expectedError == nil {
@@ -325,7 +325,7 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
-				t.Fatalf("%q expected %v, got %v (where clause used: %q)", tt.input, tt.expectedPlayers, players, where)
+				t.Fatalf("%q expected %v, got %v (conditions used: %q)", tt.input, tt.expectedPlayers, players, conditions)
 			}
 		})
 	}
@@ -384,7 +384,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
-			where, values, err := c.Convert([]byte(tt.input))
+			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -392,7 +392,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 			rows, err := db.Query(`
 				SELECT id
 				FROM players
-				WHERE `+where+`;
+				WHERE `+conditions+`;
 			`, values...)
 			if err != nil {
 				t.Fatal(err)
@@ -408,7 +408,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
-				t.Fatalf("%q expected %v, got %v (where clause used: %q)", tt.input, tt.expectedPlayers, players, where)
+				t.Fatalf("%q expected %v, got %v (conditions used: %q)", tt.input, tt.expectedPlayers, players, conditions)
 			}
 		})
 	}
@@ -452,7 +452,7 @@ func TestIntegration_Logic(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
-			where, values, err := c.Convert([]byte(tt.input))
+			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -460,7 +460,7 @@ func TestIntegration_Logic(t *testing.T) {
 			rows, err := db.Query(`
 				SELECT id
 				FROM players
-				WHERE `+where+`;
+				WHERE `+conditions+`;
 			`, values...)
 			if err != nil {
 				t.Fatal(err)
@@ -476,7 +476,7 @@ func TestIntegration_Logic(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
-				t.Fatalf("%q expected %v, got %v (where clause used: %q)", tt.input, tt.expectedPlayers, players, where)
+				t.Fatalf("%q expected %v, got %v (conditions used: %q)", tt.input, tt.expectedPlayers, players, conditions)
 			}
 		})
 	}
