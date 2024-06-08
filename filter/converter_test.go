@@ -208,6 +208,14 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("empty objects not allowed"),
 		},
+		{
+			"sql injection",
+			nil,
+			`{"\"bla = 1 --": 1}`,
+			``,
+			nil,
+			fmt.Errorf("invalid column name: \"bla = 1 --"),
+		},
 	}
 
 	for _, tt := range tests {

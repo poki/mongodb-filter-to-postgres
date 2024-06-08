@@ -282,8 +282,8 @@ func TestIntegration_BasicOperators(t *testing.T) {
 		{
 			`unknown column`,
 			`{"foobar": "admin"}`,
+			[]int{},
 			nil,
-			errors.New("pq: column \"foobar\" does not exist"),
 		},
 		{
 			`invalid value`,
@@ -297,15 +297,23 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{},
 			nil,
 		},
+		{
+			"$gt with jsonb column",
+			`{"guild_id": { "$gt": 40 }}`,
+			[]int{7, 8, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class", "mount", "items", "parents"))
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			t.Log(conditions, values)
 
 			rows, err := db.Query(`
 				SELECT id
@@ -331,7 +339,7 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
-				t.Fatalf("%q expected %v, got %v (conditions used: %q)", tt.input, tt.expectedPlayers, players, conditions)
+				t.Fatalf("expected %v, got %v", tt.expectedPlayers, players)
 			}
 		})
 	}
@@ -368,7 +376,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 		{
 			"jsonb regex",
 			`{"pet": {"$regex": "^.{3}$"}}`,
-			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			[]int{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 		{
 			"excemption column",

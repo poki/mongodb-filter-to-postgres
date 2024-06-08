@@ -1,4 +1,4 @@
-module github.com/poki/mongodb-filter-to-postgres/fuzz
+module github.com/poki/mongodb-filter-to-postgres/integration
 
 go 1.22.2
 
