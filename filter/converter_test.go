@@ -264,6 +264,30 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("invalid comparison value (must be a primitive): [200 300]"),
 		},
+		{
+			"sql injection",
+			nil,
+			`{"\"bla = 1 --": 1}`,
+			``,
+			nil,
+			fmt.Errorf("invalid column name: \"bla = 1 --"),
+		},
+		{
+			"null nornal column",
+			nil,
+			`{"name": null}`,
+			`("name" IS NULL)`,
+			nil,
+			nil,
+		},
+		{
+			"null jsonb column",
+			filter.WithNestedJSONB("meta"),
+			`{"name": null}`,
+			`(jsonb_path_match(meta, 'exists($.name)') AND "meta"->>'name' IS NULL)`,
+			nil,
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
