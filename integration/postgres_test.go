@@ -357,6 +357,30 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{1, 5, 6, 7, 8, 9, 10},
 			nil,
 		},
+		{
+			"$elemMatch on normal column",
+			`{"items": {"$elemMatch": {"$regex": "a"}}}`,
+			[]int{5, 6},
+			nil,
+		},
+		{
+			"$elemMatch on jsonb column",
+			`{"hats": {"$elemMatch": {"$regex": "a"}}}`,
+			[]int{6},
+			nil,
+		},
+		{
+			"$elemMatch with a numeric column",
+			`{"parents": {"$elemMatch": {"$gt": 40, "$lt": 60}}}`,
+			[]int{3},
+			nil,
+		},
+		{
+			"$elemMatch with numeric jsonb column",
+			`{"keys": {"$elemMatch": {"$gt": 5}}}`,
+			[]int{3},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

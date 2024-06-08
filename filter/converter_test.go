@@ -304,6 +304,38 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			nil,
 		},
+		{
+			"sql injection",
+			nil,
+			`{"\"bla = 1 --": 1}`,
+			``,
+			nil,
+			fmt.Errorf("invalid column name: \"bla = 1 --"),
+		},
+		{
+			"$elemMatch on normal column",
+			nil,
+			`{"name": {"$elemMatch": {"$eq": "John"}}}`,
+			`EXISTS (SELECT 1 FROM unnest("name") AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))`,
+			[]any{"John"},
+			nil,
+		},
+		{
+			"$elemMatch on jsonb column",
+			filter.WithNestedJSONB("meta"),
+			`{"name": {"$elemMatch": {"$eq": "John"}}}`,
+			`EXISTS (SELECT 1 FROM jsonb_array_elements("meta"->'name') AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))`,
+			[]any{"John"},
+			nil,
+		},
+		{
+			"$elemMatch with $gt",
+			filter.WithPlaceholderName("__placeholder"),
+			`{"age": {"$elemMatch": {"$gt": 18}}}`,
+			`EXISTS (SELECT 1 FROM unnest("age") AS __placeholder WHERE ("__placeholder"::text > $1))`,
+			[]any{float64(18)},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

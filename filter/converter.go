@@ -19,6 +19,11 @@ var basicOperatorMap = map[string]string{
 	"$regex": "~*",
 }
 
+// DefaultPlaceholderName is the default placeholder name used in the generated SQL query.
+// This name should not be used in the database or any JSONB column. It can be changed using
+// the WithPlaceholderName option.
+const DefaultPlaceholderName = "__filter_placeholder"
+
 type Converter struct {
 	nestedColumn     string
 	nestedExemptions []string
@@ -26,7 +31,8 @@ type Converter struct {
 		driver.Valuer
 		sql.Scanner
 	}
-	emptyCondition string
+	emptyCondition  string
+	placeholderName string
 }
 
 // NewConverter creates a new Converter with optional nested JSONB field mapping.
@@ -40,6 +46,9 @@ func NewConverter(options ...Option) *Converter {
 		if option != nil {
 			option(converter)
 		}
+	}
+	if converter.placeholderName == "" {
+		converter.placeholderName = DefaultPlaceholderName
 	}
 	return converter
 }
@@ -197,6 +206,35 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							neg = "NOT "
 						}
 						inner = append(inner, fmt.Sprintf("(%sjsonb_path_match(%s, 'exists($.%s)'))", neg, c.nestedColumn, key))
+					case "$elemMatch":
+						// $elemMatch needs a different implementation depending on if the column is in JSONB or not.
+						isNestedColumn := c.nestedColumn != ""
+						for _, exemption := range c.nestedExemptions {
+							if exemption == key {
+								isNestedColumn = false
+								break
+							}
+						}
+						innerConditions, innerValues, err := c.convertFilter(map[string]any{c.placeholderName: v[operator]}, paramIndex)
+						if err != nil {
+							return "", nil, err
+						}
+						paramIndex += len(innerValues)
+						if isNestedColumn {
+							// This will for example become:
+							//
+							//   EXISTS (SELECT 1 FROM jsonb_array_elements("meta"->'foo') AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))
+							//
+							// We can't use c.columnName here because we need `->` to get the jsonb value instead of `->>` which gets the text value.
+							inner = append(inner, fmt.Sprintf("EXISTS (SELECT 1 FROM jsonb_array_elements(%q->'%s') AS %s WHERE %s)", c.nestedColumn, key, c.placeholderName, innerConditions))
+						} else {
+							// This will for example become:
+							//
+							//   EXISTS (SELECT 1 FROM unnest("foo") AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))
+							//
+							inner = append(inner, fmt.Sprintf("EXISTS (SELECT 1 FROM unnest(%s) AS %s WHERE %s)", c.columnName(key), c.placeholderName, innerConditions))
+						}
+						values = append(values, innerValues...)
 					default:
 						value := v[operator]
 						op, ok := basicOperatorMap[operator]
@@ -247,6 +285,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 }
 
 func (c *Converter) columnName(column string) string {
+	if column == c.placeholderName {
+		return fmt.Sprintf(`%q::text`, column)
+	}
 	if c.nestedColumn == "" {
 		return fmt.Sprintf("%q", column)
 	}
