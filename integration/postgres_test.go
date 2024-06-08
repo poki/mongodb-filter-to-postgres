@@ -309,6 +309,12 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{3, 4, 5, 6, 7, 8, 9, 10},
 			nil,
 		},
+		{
+			`jsonb equal to null`,
+			`{"$not": {"pet": "cat"}}`,
+			[]int{1, 3, 5, 7, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
