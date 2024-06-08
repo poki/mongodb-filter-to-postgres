@@ -321,6 +321,12 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{3, 4, 5, 6, 7, 8, 9, 10},
 			nil,
 		},
+		{
+			"$gt with jsonb column",
+			`{"guild_id": { "$gt": 40 }}`,
+			[]int{7, 8, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
