@@ -21,6 +21,7 @@ func FuzzConverter(f *testing.F) {
 		`{"b": 1, "c": 2, "a": 3}`,
 		`{"status": {"$in": ["NEW", "OPEN"]}}`,
 		`{"status": {"$in": [{"hacker": 1}, "OPEN"]}}`,
+		`{"status": {"$nin": ["NEW", "OPEN"]}}`,
 		`{"status": {"$in": "text"}}`,
 		`{"status": {"$in": ["guest", null]}}`,
 		`{"$or": [{"name": "John"}, {"name": "Doe"}]}`,
