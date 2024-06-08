@@ -93,7 +93,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 		value := filter[key]
 
 		switch key {
-		case "$or", "$and":
+		case "$or", "$and", "$nor":
 			opConditions, ok := anyToSliceMapAny(value)
 			if !ok {
 				return "", nil, fmt.Errorf("invalid value for $or operator (must be array of objects): %v", value)
@@ -112,14 +112,18 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				inner = append(inner, innerConditions)
 				values = append(values, innerValues...)
 			}
-			op := "AND"
-			if key == "$or" {
-				op = "OR"
-			}
-			if len(inner) > 1 {
-				conditions = append(conditions, "("+strings.Join(inner, " "+op+" ")+")")
+			if key == "$nor" {
+				conditions = append(conditions, "NOT ("+strings.Join(inner, " OR ")+")")
 			} else {
-				conditions = append(conditions, strings.Join(inner, " "+op+" "))
+				op := "AND"
+				if key == "$or" {
+					op = "OR"
+				}
+				if len(inner) > 1 {
+					conditions = append(conditions, "("+strings.Join(inner, " "+op+" ")+")")
+				} else {
+					conditions = append(conditions, strings.Join(inner, " "+op+" "))
+				}
 			}
 		default:
 			if !isValidPostgresIdentifier(key) {
