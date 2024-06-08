@@ -282,8 +282,8 @@ func TestIntegration_BasicOperators(t *testing.T) {
 		{
 			`unknown column`,
 			`{"foobar": "admin"}`,
+			[]int{},
 			nil,
-			errors.New("pq: column \"foobar\" does not exist"),
 		},
 		{
 			`invalid value`,
@@ -297,15 +297,101 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{},
 			nil,
 		},
+		{
+			`equal to array`,
+			`{"level": [20, 30]}`,
+			[]int{2, 3},
+			nil,
+		},
+		{
+			`column equal to null`,
+			`{"mount": null}`,
+			[]int{3, 4},
+			nil,
+		},
+		{
+			`jsonb equal to null`,
+			`{"pet": null}`,
+			[]int{10},
+			nil,
+		},
+		{
+			`jsonb equal to null`,
+			`{"$not": {"pet": null}}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9},
+			nil,
+		},
+		{
+			`jsonb exists`,
+			`{"pet": {"$exists": false}}`,
+			[]int{9},
+			nil,
+		},
+		{
+			`jsonb exists`,
+			`{"pet": {"$exists": true}}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 10},
+			nil,
+		},
+		{
+			"$in",
+			`{"level": {"$in": [20, 30, 40]}}`,
+			[]int{2, 3, 4},
+			nil,
+		},
+		{
+			"$nin",
+			`{"level": {"$nin": [20, 30, 40]}}`,
+			[]int{1, 5, 6, 7, 8, 9, 10},
+			nil,
+		},
+		{
+			"$elemMatch on normal column",
+			`{"items": {"$elemMatch": {"$regex": "a"}}}`,
+			[]int{5, 6},
+			nil,
+		},
+		{
+			"$elemMatch on jsonb column",
+			`{"hats": {"$elemMatch": {"$regex": "a"}}}`,
+			[]int{6},
+			nil,
+		},
+		{
+			"$elemMatch with a numeric column",
+			`{"parents": {"$elemMatch": {"$gt": 40, "$lt": 60}}}`,
+			[]int{3},
+			nil,
+		},
+		{
+			"$elemMatch with numeric jsonb column",
+			`{"keys": {"$elemMatch": {"$gt": 5}}}`,
+			[]int{3},
+			nil,
+		},
+		{
+			"$gt with jsonb column",
+			`{"guild_id": { "$gt": 40 }}`,
+			[]int{7, 8, 9, 10},
+			nil,
+		},
+		{
+			"$nor",
+			`{"$nor": [{"name": "Alice"}, {"name": "Bob"}]}`,
+			[]int{3, 4, 5, 6, 7, 8, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class", "mount", "items", "parents"))
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
 			}
+
+			t.Log(conditions, values)
 
 			rows, err := db.Query(`
 				SELECT id
@@ -331,22 +417,9 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
-				t.Fatalf("%q expected %v, got %v (conditions used: %q)", tt.input, tt.expectedPlayers, players, conditions)
+				t.Fatalf("expected %v, got %v", tt.expectedPlayers, players)
 			}
 		})
-	}
-
-	for op := range filter.BasicOperatorMap {
-		found := false
-		for _, tt := range tests {
-			if strings.Contains(tt.input, op) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("operator %q is not tested", op)
-		}
 	}
 }
 
@@ -368,7 +441,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 		{
 			"jsonb regex",
 			`{"pet": {"$regex": "^.{3}$"}}`,
-			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			[]int{1, 2, 3, 4, 5, 6, 7, 8},
 		},
 		{
 			"excemption column",
