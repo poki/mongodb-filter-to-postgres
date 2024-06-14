@@ -240,6 +240,14 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("$not as scalar operator not supported"),
 		},
+		{
+			"$not with a scalar",
+			nil,
+			`{"$not": "John"}`,
+			``,
+			nil,
+			fmt.Errorf("invalid value for $not operator (must be object): John"),
+		},
 	}
 
 	for _, tt := range tests {
