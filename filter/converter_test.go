@@ -228,7 +228,7 @@ func TestConverter_Convert(t *testing.T) {
 			"$not operator",
 			nil,
 			`{"$not": {"name": "John"}}`,
-			`(NOT ("name" = $1) OR ("name" = $1) IS NULL)`,
+			`(NOT COALESCE(("name" = $1), FALSE))`,
 			[]any{"John"},
 			nil,
 		},

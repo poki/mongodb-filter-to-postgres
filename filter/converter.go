@@ -137,7 +137,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 			paramIndex += len(innerValues)
 			// Just putting a NOT around the condition is not enough, a non existing jsonb field will for example
 			// make the whole inner condition NULL. And NOT NULL is still a falsy value, so we need to check for NULL explicitly.
-			conditions = append(conditions, fmt.Sprintf("(NOT %s OR %s IS NULL)", innerConditions, innerConditions))
+			conditions = append(conditions, fmt.Sprintf("(NOT COALESCE(%s, FALSE))", innerConditions))
 			values = append(values, innerValues...)
 		default:
 			if !isValidPostgresIdentifier(key) {
