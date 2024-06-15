@@ -191,6 +191,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				}
 				conditions = append(conditions, innerResult)
 			default:
+				if !isScalar(value) {
+					return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
+				}
 				conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), paramIndex))
 				paramIndex++
 				values = append(values, value)

@@ -248,6 +248,22 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("invalid value for $not operator (must be object): John"),
 		},
+		{
+			"sql injection",
+			nil,
+			`{"\"bla = 1 --": 1}`,
+			``,
+			nil,
+			fmt.Errorf("invalid column name: \"bla = 1 --"),
+		},
+		{
+			"compare with array",
+			nil,
+			`{"items": [200, 300]}`,
+			``,
+			nil,
+			fmt.Errorf("invalid comparison value (must be a primitive): [200 300]"),
+		},
 	}
 
 	for _, tt := range tests {
