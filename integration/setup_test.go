@@ -114,24 +114,27 @@ func createPlayersTable(t *testing.T, db *sql.DB) {
 			"name" text,
 			"metadata" jsonb,
 			"level" int,
-			"class" text
+			"class" text,
+			"mount" text,
+			"items" text[],
+			"parents" int[]
 		);
 	`); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := db.Exec(`
-		INSERT INTO players ("id", "name", "metadata", "level", "class")
-		VALUES
-			(1, 'Alice', '{"guild_id": 20, "pet": "dog"}', 10, 'warrior'),
-			(2, 'Bob', '{"guild_id": 20, "pet": "cat"}', 20, 'mage'),
-			(3, 'Charlie', '{"guild_id": 30, "pet": "dog"}', 30, 'rogue'),
-			(4, 'David', '{"guild_id": 30, "pet": "cat"}', 40, 'warrior'),
-			(5, 'Eve', '{"guild_id": 40, "pet": "dog"}', 50, 'mage'),
-			(6, 'Frank', '{"guild_id": 40, "pet": "cat"}', 60, 'rogue'),
-			(7, 'Grace', '{"guild_id": 50, "pet": "dog"}', 70, 'warrior'),
-			(8, 'Hank', '{"guild_id": 50, "pet": "cat"}', 80, 'mage'),
-			(9, 'Ivy', '{"guild_id": 60, "pet": "dog"}', 90, 'rogue'),
-			(10, 'Jack', '{"guild_id": 60, "pet": "cat"}', 100, 'warrior')
+		INSERT INTO players
+			("id", "name",    "metadata",                                           "level", "class",    "mount",   "items",              "parents") VALUES
+			(1,    'Alice',   '{"guild_id": 20, "pet": "dog"                    }', 10,      'warrior',  'horse',   '{}',                 '{40, 60}'),
+			(2,    'Bob',	  '{"guild_id": 20, "pet": "cat", "keys": [1, 3]    }', 20,      'mage',     'horse',   '{}',                 '{20, 30}'),
+			(3,    'Charlie', '{"guild_id": 30, "pet": "dog", "keys": [4, 6]    }', 30,      'rogue',    NULL,      '{}',                 '{30, 50}'),
+			(4,    'David',   '{"guild_id": 30, "pet": "cat"                    }', 40,      'warrior',  NULL,      '{}',                 '{}'),
+			(5,    'Eve',     '{"guild_id": 40, "pet": "dog", "hats": ["helmet"]}', 50,      'mage',     'griffon', '{"staff", "cloak"}', '{}'),
+			(6,    'Frank',   '{"guild_id": 40, "pet": "cat", "hats": ["cap"]   }', 60,      'rogue',    'griffon', '{"dagger"}',         '{}'),
+			(7,    'Grace',   '{"guild_id": 50, "pet": "dog"                    }', 70,      'warrior',  'dragon',  '{"sword"}',          '{}'),
+			(8,    'Hank',    '{"guild_id": 50, "pet": "cat"                    }', 80,      'mage',     'dragon',  '{}',                 '{}'),
+			(9,    'Ivy',     '{"guild_id": 60                                  }', 90,      'rogue',    'phoenix', '{}',                 '{}'),
+			(10,   'Jack',    '{"guild_id": 60, "pet": null                     }', 100,     'warrior',  'phoenix', '{}',                 '{}');
 	`); err != nil {
 		t.Fatal(err)
 	}
