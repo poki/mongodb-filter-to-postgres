@@ -39,6 +39,7 @@ func FuzzConverter(f *testing.F) {
 		`{"\"bla = 1 --": 1}`,
 		`{"$not": {"name": "John"}}`,
 		`{"name": {"$not": {"$eq": "John"}}}`,
+		`{"name": null}`,
 	}
 	for _, tc := range tcs {
 		f.Add(tc, true)

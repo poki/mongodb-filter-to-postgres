@@ -190,6 +190,21 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					innerResult = "(" + innerResult + ")"
 				}
 				conditions = append(conditions, innerResult)
+			case nil:
+				// Comparing a column to NULL needs a different implementation depending on if the column is in JSONB or not.
+				// JSONB columns are NULL even if they don't exist, so we need to check if the column exists first.
+				isNestedColumn := c.nestedColumn != ""
+				for _, exemption := range c.nestedExemptions {
+					if exemption == key {
+						isNestedColumn = false
+						break
+					}
+				}
+				if isNestedColumn {
+					conditions = append(conditions, fmt.Sprintf("(jsonb_path_match(%s, 'exists($.%s)') AND %s IS NULL)", c.nestedColumn, key, c.columnName(key)))
+				} else {
+					conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", c.columnName(key)))
+				}
 			default:
 				if !isScalar(value) {
 					return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)

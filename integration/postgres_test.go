@@ -322,9 +322,15 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			nil,
 		},
 		{
-			"$gt with jsonb column",
-			`{"guild_id": { "$gt": 40 }}`,
-			[]int{7, 8, 9, 10},
+			`column equal to null`,
+			`{"mount": null}`,
+			[]int{3, 4},
+			nil,
+		},
+		{
+			`jsonb equal to null`,
+			`{"pet": null}`,
+			[]int{10},
 			nil,
 		},
 	}
