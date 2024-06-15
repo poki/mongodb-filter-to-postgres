@@ -174,6 +174,24 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							v[operator] = c.arrayDriver(v[operator])
 						}
 						values = append(values, v[operator])
+					case "$exists":
+						// $exists only works on jsonb columns, so we need to check if the key is in the JSONB data first.
+						isNestedColumn := c.nestedColumn != ""
+						for _, exemption := range c.nestedExemptions {
+							if exemption == key {
+								isNestedColumn = false
+								break
+							}
+						}
+						if !isNestedColumn {
+							// There is no way in Postgres to check if a column exists on a table.
+							return "", nil, fmt.Errorf("$exists operator not supported on non-nested jsonb columns")
+						}
+						neg := ""
+						if v[operator] == false {
+							neg = "NOT "
+						}
+						inner = append(inner, fmt.Sprintf("(%sjsonb_path_match(%s, 'exists($.%s)'))", neg, c.nestedColumn, key))
 					default:
 						value := v[operator]
 						op, ok := basicOperatorMap[operator]

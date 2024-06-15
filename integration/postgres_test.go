@@ -333,6 +333,18 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{10},
 			nil,
 		},
+		{
+			`jsonb exists`,
+			`{"pet": {"$exists": false}}`,
+			[]int{9},
+			nil,
+		},
+		{
+			`jsonb exists`,
+			`{"pet": {"$exists": true}}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

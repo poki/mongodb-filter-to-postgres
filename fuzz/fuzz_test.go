@@ -40,6 +40,7 @@ func FuzzConverter(f *testing.F) {
 		`{"$not": {"name": "John"}}`,
 		`{"name": {"$not": {"$eq": "John"}}}`,
 		`{"name": null}`,
+		`{"name": {"$exists": false}}`,
 	}
 	for _, tc := range tcs {
 		f.Add(tc, true)
