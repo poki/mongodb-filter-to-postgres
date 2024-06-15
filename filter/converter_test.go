@@ -224,6 +224,30 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("invalid column name: \"bla = 1 --"),
 		},
+		{
+			"$not operator",
+			nil,
+			`{"$not": {"name": "John"}}`,
+			`(NOT COALESCE(("name" = $1), FALSE))`,
+			[]any{"John"},
+			nil,
+		},
+		{
+			"$not in the wrong place",
+			nil,
+			`{"name": {"$not": {"$eq": "John"}}}`,
+			``,
+			nil,
+			fmt.Errorf("$not as scalar operator not supported"),
+		},
+		{
+			"$not with a scalar",
+			nil,
+			`{"$not": "John"}`,
+			``,
+			nil,
+			fmt.Errorf("invalid value for $not operator (must be object): John"),
+		},
 	}
 
 	for _, tt := range tests {

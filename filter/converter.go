@@ -125,6 +125,20 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					conditions = append(conditions, strings.Join(inner, " "+op+" "))
 				}
 			}
+		case "$not":
+			vv, ok := value.(map[string]any)
+			if !ok {
+				return "", nil, fmt.Errorf("invalid value for $not operator (must be object): %v", value)
+			}
+			innerConditions, innerValues, err := c.convertFilter(vv, paramIndex)
+			if err != nil {
+				return "", nil, err
+			}
+			paramIndex += len(innerValues)
+			// Just putting a NOT around the condition is not enough, a non existing jsonb field will for example
+			// make the whole inner condition NULL. And NOT NULL is still a falsy value, so we need to check for NULL explicitly.
+			conditions = append(conditions, fmt.Sprintf("(NOT COALESCE(%s, FALSE))", innerConditions))
+			values = append(values, innerValues...)
 		default:
 			if !isValidPostgresIdentifier(key) {
 				return "", nil, fmt.Errorf("invalid column name: %s", key)
@@ -148,6 +162,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						return "", nil, fmt.Errorf("$or as scalar operator not supported")
 					case "$and":
 						return "", nil, fmt.Errorf("$and as scalar operator not supported")
+					case "$not":
+						return "", nil, fmt.Errorf("$not as scalar operator not supported")
 					case "$in":
 						if !isScalarSlice(v[operator]) {
 							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
