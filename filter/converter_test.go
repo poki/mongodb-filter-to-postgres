@@ -198,7 +198,7 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			`{}`,
 			`FALSE`,
-			[]any{},
+			nil,
 			nil,
 		}, {
 			"empty or conditions",
