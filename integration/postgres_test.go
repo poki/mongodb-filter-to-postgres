@@ -345,6 +345,18 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 10},
 			nil,
 		},
+		{
+			"$in",
+			`{"level": {"$in": [20, 30, 40]}}`,
+			[]int{2, 3, 4},
+			nil,
+		},
+		{
+			"$nin",
+			`{"level": {"$nin": [20, 30, 40]}}`,
+			[]int{1, 5, 6, 7, 8, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

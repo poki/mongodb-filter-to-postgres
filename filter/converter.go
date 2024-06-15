@@ -164,11 +164,16 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						return "", nil, fmt.Errorf("$and as scalar operator not supported")
 					case "$not":
 						return "", nil, fmt.Errorf("$not as scalar operator not supported")
-					case "$in":
+					case "$in", "$nin":
 						if !isScalarSlice(v[operator]) {
 							return "", nil, fmt.Errorf("invalid value for $in operator (must array of primatives): %v", v[operator])
 						}
-						inner = append(inner, fmt.Sprintf("(%s = ANY($%d))", c.columnName(key), paramIndex))
+						neg := ""
+						if operator == "$nin" {
+							// `column != ANY(...)` does not work, so we need to do `NOT column = ANY(...)` instead.
+							neg = "NOT "
+						}
+						inner = append(inner, fmt.Sprintf("(%s%s = ANY($%d))", neg, c.columnName(key), paramIndex))
 						paramIndex++
 						if c.arrayDriver != nil {
 							v[operator] = c.arrayDriver(v[operator])

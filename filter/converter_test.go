@@ -82,7 +82,7 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 		},
 		{
-			"in-array operator invalid value",
+			"simple $in",
 			nil,
 			`{"status": {"$in": [{"hacker": 1}, "OPEN"]}}`,
 			``,
@@ -90,7 +90,15 @@ func TestConverter_Convert(t *testing.T) {
 			fmt.Errorf("invalid value for $in operator (must array of primatives): [map[hacker:1] OPEN]"),
 		},
 		{
-			"in-array operator scalar value",
+			"simple $nin",
+			nil,
+			`{"status": {"$nin": ["NEW", "OPEN"]}}`,
+			`(NOT "status" = ANY($1))`,
+			[]any{[]any{"NEW", "OPEN"}},
+			nil,
+		},
+		{
+			"$in scalar value",
 			nil,
 			`{"status": {"$in": "text"}}`,
 			``,
@@ -98,7 +106,7 @@ func TestConverter_Convert(t *testing.T) {
 			fmt.Errorf("invalid value for $in operator (must array of primatives): text"),
 		},
 		{
-			"in-array operator with null value",
+			"$in with null value",
 			nil,
 			`{"status": {"$in": ["guest", null]}}`,
 			`("status" = ANY($1))`,
