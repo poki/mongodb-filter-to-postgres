@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var BasicOperatorMap = map[string]string{
+var basicOperatorMap = map[string]string{
 	"$gt":    ">",
 	"$gte":   ">=",
 	"$lt":    "<",
@@ -156,7 +156,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						values = append(values, v[operator])
 					default:
 						value := v[operator]
-						op, ok := BasicOperatorMap[operator]
+						op, ok := basicOperatorMap[operator]
 						if !ok {
 							return "", nil, fmt.Errorf("unknown operator: %s", operator)
 						}

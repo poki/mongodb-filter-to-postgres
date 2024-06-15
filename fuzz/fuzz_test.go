@@ -1,6 +1,7 @@
 package fuzz
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -33,13 +34,22 @@ func FuzzConverter(f *testing.F) {
 		`{"name": {}}`,
 		`{"$or": []}`,
 		`{"status": {"$in": []}}`,
+		`{"$or": [{}, {}]}`,
+		`{"\"bla = 1 --": 1}`,
 	}
 	for _, tc := range tcs {
-		f.Add(tc)
+		f.Add(tc, true)
+		f.Add(tc, false)
 	}
 
-	f.Fuzz(func(t *testing.T, in string) {
-		c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+	f.Fuzz(func(t *testing.T, in string, jsonb bool) {
+		options := []filter.Option{
+			filter.WithArrayDriver(pq.Array),
+		}
+		if jsonb {
+			options = append(options, filter.WithNestedJSONB("meta"))
+		}
+		c := filter.NewConverter(options...)
 		conditions, _, err := c.Convert([]byte(in), 1)
 		if err == nil && conditions != "" {
 			j, err := pg_query.ParseToJSON("SELECT * FROM test WHERE 1 AND " + conditions)
@@ -47,6 +57,46 @@ func FuzzConverter(f *testing.F) {
 				t.Fatalf("%q %q %v", in, conditions, err)
 			}
 
+			t.Log(j)
+
+			var q struct {
+				Stmts []struct {
+					Stmt struct {
+						SelectStmt struct {
+							FromClause []struct {
+								RangeVar struct {
+									Relname string `json:"relname"`
+								} `json:"RangeVar"`
+							} `json:"fromClause"`
+
+							WhereClause struct {
+								BoolExpr struct {
+									Boolop string `json:"boolop"`
+									Args   []any  `json:"args"`
+								} `json:"BoolExpr"`
+							} `json:"whereClause"`
+						} `json:"SelectStmt"`
+					} `json:"stmt"`
+				} `json:"stmts"`
+			}
+			if err := json.Unmarshal([]byte(j), &q); err != nil {
+				t.Fatal(err)
+			}
+			if len(q.Stmts) != 1 {
+				t.Fatal(conditions, "len(q.Stmts) != 1")
+			}
+			if len(q.Stmts[0].Stmt.SelectStmt.FromClause) != 1 {
+				t.Fatal(conditions, "len(q.Stmts[0].Stmt.SelectStmt.FromClause) != 1")
+			}
+			if q.Stmts[0].Stmt.SelectStmt.FromClause[0].RangeVar.Relname != "test" {
+				t.Fatal(conditions, "q.Stmts[0].Stmt.SelectStmt.FromClause[0].RangeVar.Relname != test")
+			}
+			if q.Stmts[0].Stmt.SelectStmt.WhereClause.BoolExpr.Boolop != "AND_EXPR" {
+				t.Fatal(conditions, "q.Stmts[0].Stmt.SelectStmt.WhereClause.BoolExpr.Boolop != AND_EXPR")
+			}
+			if len(q.Stmts[0].Stmt.SelectStmt.WhereClause.BoolExpr.Args) != 2 {
+				t.Fatal(conditions, "len(q.Stmts[0].Stmt.SelectStmt.WhereClause.BoolExpr.Args) != 2")
+			}
 			if strings.Contains(j, "CommentStmt") {
 				t.Fatal(conditions, "CommentStmt found")
 			}
