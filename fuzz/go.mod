@@ -10,4 +10,4 @@ require (
 	github.com/poki/mongodb-filter-to-postgres v0.0.0
 )
 
-require google.golang.org/protobuf v1.31.0 // indirect
+require google.golang.org/protobuf v1.33.0 // indirect
