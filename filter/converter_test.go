@@ -138,6 +138,14 @@ func TestConverter_Convert(t *testing.T) {
 			fmt.Errorf("$or as scalar operator not supported"),
 		},
 		{
+			"$nor operator basic",
+			nil,
+			`{"$nor": [{"name": "John"}, {"name": "Doe"}]}`,
+			`NOT (("name" = $1) OR ("name" = $2))`,
+			[]any{"John", "Doe"},
+			nil,
+		},
+		{
 			"and operator basic",
 			nil,
 			`{"$and": [{"name": "John"}, {"version": 3}]}`,

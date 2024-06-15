@@ -303,6 +303,12 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{7, 8, 9, 10},
 			nil,
 		},
+		{
+			"$nor",
+			`{"$nor": [{"name": "Alice"}, {"name": "Bob"}]}`,
+			[]int{3, 4, 5, 6, 7, 8, 9, 10},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

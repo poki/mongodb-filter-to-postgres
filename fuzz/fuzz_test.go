@@ -27,6 +27,7 @@ func FuzzConverter(f *testing.F) {
 		`{"$or": [{"org": "poki", "admin": true}, {"age": {"$gte": 18}}]}`,
 		`{"$or": [{"$or": [{"name": "John"}, {"name": "Doe"}]}, {"name": "Jane"}]}`,
 		`{"foo": { "$or": [ "bar", "baz" ] }}`,
+		`{"$nor": [{"name": "John"}, {"name": "Doe"}]}`,
 		`{"$and": [{"name": "John"}, {"version": 3}]}`,
 		`{"$and": [{"name": "John", "version": 3}]}`,
 		`{"name": {"$regex": "John"}}`,
