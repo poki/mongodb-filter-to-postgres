@@ -49,3 +49,12 @@ func WithEmptyCondition(condition string) Option {
 		c.emptyCondition = condition
 	}
 }
+
+// WithPlaceholderName is an option to specify the placeholder name that will be
+// used in the generated SQL query. This name should not be used in the database
+// or any JSONB column.
+func WithPlaceholderName(name string) Option {
+	return func(c *Converter) {
+		c.placeholderName = name
+	}
+}
