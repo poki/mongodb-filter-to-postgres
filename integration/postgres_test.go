@@ -343,19 +343,6 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			}
 		})
 	}
-
-	for op := range filter.BasicOperatorMap {
-		found := false
-		for _, tt := range tests {
-			if strings.Contains(tt.input, op) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			t.Fatalf("operator %q is not tested", op)
-		}
-	}
 }
 
 func TestIntegration_NestedJSONB(t *testing.T) {

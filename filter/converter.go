@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var BasicOperatorMap = map[string]string{
+var basicOperatorMap = map[string]string{
 	"$gt":    ">",
 	"$gte":   ">=",
 	"$lt":    "<",
@@ -53,6 +53,10 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 		return "", nil, fmt.Errorf("startAtParameterIndex must be greater than 0")
 	}
 
+	if len(query) == 0 {
+		return c.emptyCondition, nil, nil
+	}
+
 	var mongoFilter map[string]any
 	err = json.Unmarshal(query, &mongoFilter)
 	if err != nil {
@@ -60,7 +64,7 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 	}
 
 	if len(mongoFilter) == 0 {
-		return c.emptyCondition, []any{}, nil
+		return c.emptyCondition, nil, nil
 	}
 
 	conditions, values, err = c.convertFilter(mongoFilter, startAtParameterIndex)
@@ -152,7 +156,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						values = append(values, v[operator])
 					default:
 						value := v[operator]
-						op, ok := BasicOperatorMap[operator]
+						op, ok := basicOperatorMap[operator]
 						if !ok {
 							return "", nil, fmt.Errorf("unknown operator: %s", operator)
 						}

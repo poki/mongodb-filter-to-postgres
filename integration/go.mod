@@ -1,6 +1,6 @@
 module github.com/poki/mongodb-filter-to-postgres/integration
 
-go 1.22.2
+go 1.21
 
 replace github.com/poki/mongodb-filter-to-postgres v0.0.0 => ../
 
