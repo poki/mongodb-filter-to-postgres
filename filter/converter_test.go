@@ -402,3 +402,28 @@ func TestConverter_WithEmptyCondition(t *testing.T) {
 		t.Errorf("Converter.Convert() values = %v, want nil", values)
 	}
 }
+
+func TestConverter_NoConstructor(t *testing.T) {
+	c := &filter.Converter{}
+	conditions, values, err := c.Convert([]byte(`{"name": "John"}`), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := `("name" = $1)`; conditions != want {
+		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
+	}
+	if !reflect.DeepEqual(values, []any{"John"}) {
+		t.Errorf("Converter.Convert() values = %v, want %v", values, []any{"John"})
+	}
+
+	conditions, values, err = c.Convert([]byte(``), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "FALSE"; conditions != want {
+		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
+	}
+	if len(values) != 0 {
+		t.Errorf("Converter.Convert() values = %v, want nil", values)
+	}
+}

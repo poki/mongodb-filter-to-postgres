@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 )
 
 var basicOperatorMap = map[string]string{
@@ -33,6 +34,8 @@ type Converter struct {
 	}
 	emptyCondition  string
 	placeholderName string
+
+	once sync.Once
 }
 
 // NewConverter creates a new Converter with optional nested JSONB field mapping.
@@ -40,15 +43,12 @@ type Converter struct {
 // Note: When using github.com/lib/pq, the filter.WithArrayDriver should be set to pq.Array.
 func NewConverter(options ...Option) *Converter {
 	converter := &Converter{
-		emptyCondition: "FALSE",
+		// don't set defaults, use the once.Do in #Convert()
 	}
 	for _, option := range options {
 		if option != nil {
 			option(converter)
 		}
-	}
-	if converter.placeholderName == "" {
-		converter.placeholderName = DefaultPlaceholderName
 	}
 	return converter
 }
@@ -58,6 +58,15 @@ func NewConverter(options ...Option) *Converter {
 // startAtParameterIndex is the index to start the parameter numbering at.
 // Passing X will make the first indexed parameter $X, the second $X+1, and so on.
 func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions string, values []any, err error) {
+	c.once.Do(func() {
+		if c.emptyCondition == "" {
+			c.emptyCondition = "FALSE"
+		}
+		if c.placeholderName == "" {
+			c.placeholderName = DefaultPlaceholderName
+		}
+	})
+
 	if startAtParameterIndex < 1 {
 		return "", nil, fmt.Errorf("startAtParameterIndex must be greater than 0")
 	}
