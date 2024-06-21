@@ -20,11 +20,12 @@ var basicOperatorMap = map[string]string{
 	"$regex": "~*",
 }
 
-// DefaultPlaceholderName is the default placeholder name used in the generated SQL query.
+// defaultPlaceholderName is the default placeholder name used in the generated SQL query.
 // This name should not be used in the database or any JSONB column. It can be changed using
 // the WithPlaceholderName option.
-const DefaultPlaceholderName = "__filter_placeholder"
+const defaultPlaceholderName = "__filter_placeholder"
 
+// Converter converts MongoDB filter queries to SQL conditions and values. Use [filter.NewConverter] to create a new instance.
 type Converter struct {
 	nestedColumn     string
 	nestedExemptions []string
@@ -38,9 +39,9 @@ type Converter struct {
 	once sync.Once
 }
 
-// NewConverter creates a new Converter with optional nested JSONB field mapping.
+// NewConverter creates a new [Converter] with optional nested JSONB field mapping.
 //
-// Note: When using github.com/lib/pq, the filter.WithArrayDriver should be set to pq.Array.
+// Note: When using https://github.com/lib/pq, the [filter.WithArrayDriver] should be set to pq.Array.
 func NewConverter(options ...Option) *Converter {
 	converter := &Converter{
 		// don't set defaults, use the once.Do in #Convert()
@@ -63,7 +64,7 @@ func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions
 			c.emptyCondition = "FALSE"
 		}
 		if c.placeholderName == "" {
-			c.placeholderName = DefaultPlaceholderName
+			c.placeholderName = defaultPlaceholderName
 		}
 	})
 

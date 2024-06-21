@@ -1,12 +1,34 @@
 package filter_test
 
 import (
+	"database/sql"
 	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/poki/mongodb-filter-to-postgres/filter"
 )
+
+func ExampleNewConverter() {
+	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
+	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+
+	mongoFilterQuery := `{
+		"name": "John",
+		"created_at": {
+			"$gte": "2020-01-01T00:00:00Z"
+		}
+	}`
+	conditions, values, err := converter.Convert([]byte(mongoFilterQuery), 1)
+	if err != nil {
+		// handle error
+	}
+
+	var db *sql.DB // setup your database connection
+
+	_, _ = db.Query("SELECT * FROM users WHERE "+conditions, values)
+	// SELECT * FROM users WHERE (("created_at" >= $1) AND ("meta"->>'name' = $2)), 2020-01-01T00:00:00Z, "John"
+}
 
 func TestConverter_Convert(t *testing.T) {
 	tests := []struct {
@@ -425,5 +447,16 @@ func TestConverter_NoConstructor(t *testing.T) {
 	}
 	if len(values) != 0 {
 		t.Errorf("Converter.Convert() values = %v, want nil", values)
+	}
+}
+
+func TestConverter_CopyReference(t *testing.T) {
+	c := filter.Converter{}
+	conditions, _, err := c.Convert([]byte(``), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := "FALSE"; conditions != want {
+		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
 	}
 }
