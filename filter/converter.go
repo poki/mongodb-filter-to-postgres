@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 )
 
 var basicOperatorMap = map[string]string{
@@ -19,11 +20,12 @@ var basicOperatorMap = map[string]string{
 	"$regex": "~*",
 }
 
-// DefaultPlaceholderName is the default placeholder name used in the generated SQL query.
+// defaultPlaceholderName is the default placeholder name used in the generated SQL query.
 // This name should not be used in the database or any JSONB column. It can be changed using
 // the WithPlaceholderName option.
-const DefaultPlaceholderName = "__filter_placeholder"
+const defaultPlaceholderName = "__filter_placeholder"
 
+// Converter converts MongoDB filter queries to SQL conditions and values. Use [filter.NewConverter] to create a new instance.
 type Converter struct {
 	nestedColumn     string
 	nestedExemptions []string
@@ -33,22 +35,21 @@ type Converter struct {
 	}
 	emptyCondition  string
 	placeholderName string
+
+	once sync.Once
 }
 
-// NewConverter creates a new Converter with optional nested JSONB field mapping.
+// NewConverter creates a new [Converter] with optional nested JSONB field mapping.
 //
-// Note: When using github.com/lib/pq, the filter.WithArrayDriver should be set to pq.Array.
+// Note: When using https://github.com/lib/pq, the [filter.WithArrayDriver] should be set to pq.Array.
 func NewConverter(options ...Option) *Converter {
 	converter := &Converter{
-		emptyCondition: "FALSE",
+		// don't set defaults, use the once.Do in #Convert()
 	}
 	for _, option := range options {
 		if option != nil {
 			option(converter)
 		}
-	}
-	if converter.placeholderName == "" {
-		converter.placeholderName = DefaultPlaceholderName
 	}
 	return converter
 }
@@ -58,6 +59,15 @@ func NewConverter(options ...Option) *Converter {
 // startAtParameterIndex is the index to start the parameter numbering at.
 // Passing X will make the first indexed parameter $X, the second $X+1, and so on.
 func (c *Converter) Convert(query []byte, startAtParameterIndex int) (conditions string, values []any, err error) {
+	c.once.Do(func() {
+		if c.emptyCondition == "" {
+			c.emptyCondition = "FALSE"
+		}
+		if c.placeholderName == "" {
+			c.placeholderName = defaultPlaceholderName
+		}
+	})
+
 	if startAtParameterIndex < 1 {
 		return "", nil, fmt.Errorf("startAtParameterIndex must be greater than 0")
 	}
