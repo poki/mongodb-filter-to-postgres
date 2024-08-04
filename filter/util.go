@@ -1,5 +1,18 @@
 package filter
 
+func isNumeric(v any) bool {
+	if v == nil {
+		return true
+	}
+
+	switch v.(type) {
+	case float64:
+		return true
+	default:
+		return false
+	}
+}
+
 func isScalar(v any) bool {
 	if v == nil {
 		return true

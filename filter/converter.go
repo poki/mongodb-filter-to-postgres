@@ -10,11 +10,14 @@ import (
 	"sync"
 )
 
-var basicOperatorMap = map[string]string{
-	"$gt":    ">",
-	"$gte":   ">=",
-	"$lt":    "<",
-	"$lte":   "<=",
+var numericOperatorMap = map[string]string{
+	"$gt":  ">",
+	"$gte": ">=",
+	"$lt":  "<",
+	"$lte": "<=",
+}
+
+var textOperatorMap = map[string]string{
 	"$eq":    "=",
 	"$ne":    "!=",
 	"$regex": "~*",
@@ -200,14 +203,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						values = append(values, v[operator])
 					case "$exists":
 						// $exists only works on jsonb columns, so we need to check if the key is in the JSONB data first.
-						isNestedColumn := c.nestedColumn != ""
-						for _, exemption := range c.nestedExemptions {
-							if exemption == key {
-								isNestedColumn = false
-								break
-							}
-						}
-						if !isNestedColumn {
+						if !c.isNestedColumn(key) {
 							// There is no way in Postgres to check if a column exists on a table.
 							return "", nil, fmt.Errorf("$exists operator not supported on non-nested jsonb columns")
 						}
@@ -217,20 +213,14 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						}
 						inner = append(inner, fmt.Sprintf("(%sjsonb_path_match(%s, 'exists($.%s)'))", neg, c.nestedColumn, key))
 					case "$elemMatch":
-						// $elemMatch needs a different implementation depending on if the column is in JSONB or not.
-						isNestedColumn := c.nestedColumn != ""
-						for _, exemption := range c.nestedExemptions {
-							if exemption == key {
-								isNestedColumn = false
-								break
-							}
-						}
 						innerConditions, innerValues, err := c.convertFilter(map[string]any{c.placeholderName: v[operator]}, paramIndex)
 						if err != nil {
 							return "", nil, err
 						}
 						paramIndex += len(innerValues)
-						if isNestedColumn {
+
+						// $elemMatch needs a different implementation depending on if the column is in JSONB or not.
+						if c.isNestedColumn(key) {
 							// This will for example become:
 							//
 							//   EXISTS (SELECT 1 FROM jsonb_array_elements("meta"->'foo') AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))
@@ -247,11 +237,29 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						values = append(values, innerValues...)
 					default:
 						value := v[operator]
-						op, ok := basicOperatorMap[operator]
+						isNumericOperatorMap := false
+						op, ok := textOperatorMap[operator]
 						if !ok {
-							return "", nil, fmt.Errorf("unknown operator: %s", operator)
+							op, ok = numericOperatorMap[operator]
+							if !ok {
+								return "", nil, fmt.Errorf("unknown operator: %s", operator)
+							}
+							isNumericOperatorMap = true
 						}
-						inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+
+						if !isScalar(value) {
+							return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
+						}
+
+						if isNumericOperatorMap && isNumeric(value) {
+							if c.isNestedColumn(key) {
+								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
+							} else {
+								inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+							}
+						} else {
+							inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+						}
 						paramIndex++
 						values = append(values, value)
 					}
@@ -307,4 +315,16 @@ func (c *Converter) columnName(column string) string {
 		}
 	}
 	return fmt.Sprintf(`%q->>'%s'`, c.nestedColumn, column)
+}
+
+func (c *Converter) isNestedColumn(column string) bool {
+	if c.nestedColumn == "" {
+		return false
+	}
+	for _, exemption := range c.nestedExemptions {
+		if exemption == column {
+			return false
+		}
+	}
+	return true
 }
