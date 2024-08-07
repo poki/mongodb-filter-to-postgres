@@ -237,26 +237,22 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 						values = append(values, innerValues...)
 					default:
 						value := v[operator]
-						isNumericOperatorMap := false
+						isNumericOperator := false
 						op, ok := textOperatorMap[operator]
 						if !ok {
 							op, ok = numericOperatorMap[operator]
 							if !ok {
 								return "", nil, fmt.Errorf("unknown operator: %s", operator)
 							}
-							isNumericOperatorMap = true
+							isNumericOperator = true
 						}
 
 						if !isScalar(value) {
 							return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
 						}
 
-						if isNumericOperatorMap && isNumeric(value) {
-							if c.isNestedColumn(key) {
-								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
-							} else {
-								inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
-							}
+						if isNumericOperator && isNumeric(value) && c.isNestedColumn(key) {
+							inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
 						} else {
 							inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
 						}

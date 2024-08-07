@@ -1,16 +1,10 @@
 package filter
 
 func isNumeric(v any) bool {
-	if v == nil {
-		return true
-	}
-
-	switch v.(type) {
-	case float64:
-		return true
-	default:
-		return false
-	}
+	// json.Unmarshal returns float64 for all numbers
+	// so we only need to check for float64.
+	_, ok := v.(float64)
+	return ok
 }
 
 func isScalar(v any) bool {

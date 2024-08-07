@@ -366,6 +366,14 @@ func TestConverter_Convert(t *testing.T) {
 			[]any{float64(0)},
 			nil,
 		},
+		{
+			"numeric comparison against null with jsonb column",
+			filter.WithNestedJSONB("meta"),
+			`{"foo": {"$gt": null}}`,
+			`("meta"->>'foo' > $1)`,
+			[]any{nil},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {
