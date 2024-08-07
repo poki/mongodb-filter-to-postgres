@@ -286,10 +286,16 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			nil,
 		},
 		{
-			`invalid value`,
+			`invalid value type int`,
 			`{"level": "town1"}`, // Level is an integer column, but the value is a string.
 			nil,
-			errors.New("pq: invalid input syntax for type integer: \"town1\""),
+			errors.New(`pq: invalid input syntax for type integer: "town1"`),
+		},
+		{
+			`invalid value type string`,
+			`{"name": 123}`, // Name is a string column, but the value is an integer.
+			[]int{},
+			nil,
 		},
 		{
 			`empty object`,
@@ -379,6 +385,18 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			"$elemMatch with numeric jsonb column",
 			`{"keys": {"$elemMatch": {"$gt": 5}}}`,
 			[]int{3},
+			nil,
+		},
+		{
+			"$lt bug with jsonb column",
+			`{"guild_id": {"$lt": 100}}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			nil,
+		},
+		{
+			"$lt with null and jsonb column",
+			`{"guild_id": {"$lt": null}}`,
+			[]int{},
 			nil,
 		},
 	}

@@ -33,6 +33,6 @@ func ExampleNewConverter_readme() {
 	fmt.Println(conditions)
 	fmt.Printf("%#v\n", values)
 	// Output:
-	// ((("meta"->>'map' ~* $1) OR ("meta"->>'map' ~* $2)) AND ("meta"->>'password' = $3) AND (("meta"->>'playerCount' >= $4) AND ("meta"->>'playerCount' < $5)))
+	// ((("meta"->>'map' ~* $1) OR ("meta"->>'map' ~* $2)) AND ("meta"->>'password' = $3) AND ((("meta"->>'playerCount')::numeric >= $4) AND (("meta"->>'playerCount')::numeric < $5)))
 	// []interface {}{"aztec", "nuke", "", 2, 10}
 }

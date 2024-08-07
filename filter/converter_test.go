@@ -358,6 +358,30 @@ func TestConverter_Convert(t *testing.T) {
 			[]any{float64(18)},
 			nil,
 		},
+		{
+			"numeric comparison bug with jsonb column",
+			filter.WithNestedJSONB("meta"),
+			`{"foo": {"$gt": 0}}`,
+			`(("meta"->>'foo')::numeric > $1)`,
+			[]any{float64(0)},
+			nil,
+		},
+		{
+			"numeric comparison against null with jsonb column",
+			filter.WithNestedJSONB("meta"),
+			`{"foo": {"$gt": null}}`,
+			`("meta"->>'foo' > $1)`,
+			[]any{nil},
+			nil,
+		},
+		{
+			"compare with non scalar",
+			nil,
+			`{"name": {"$eq": [1, 2]}}`,
+			``,
+			nil,
+			fmt.Errorf("invalid comparison value (must be a primitive): [1 2]"),
+		},
 	}
 
 	for _, tt := range tests {
