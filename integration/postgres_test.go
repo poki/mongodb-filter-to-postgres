@@ -388,13 +388,13 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			nil,
 		},
 		{
-			`$lt bug with jsonb column`,
+			"$lt bug with jsonb column",
 			`{"guild_id": {"$lt": 100}}`,
 			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
 			nil,
 		},
 		{
-			`$lt with null and jsonb column`,
+			"$lt with null and jsonb column",
 			`{"guild_id": {"$lt": null}}`,
 			[]int{},
 			nil,

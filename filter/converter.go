@@ -247,6 +247,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							isNumericOperator = true
 						}
 
+						// Prevent cryptic errors like:
+						// 	 unexpected error: sql: converting argument $1 type: unsupported type []interface {}, a slice of interface
 						if !isScalar(value) {
 							return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
 						}
@@ -281,6 +283,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", c.columnName(key)))
 				}
 			default:
+				// Prevent cryptic errors like:
+				// 	 unexpected error: sql: converting argument $1 type: unsupported type []interface {}, a slice of interface
 				if !isScalar(value) {
 					return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
 				}
