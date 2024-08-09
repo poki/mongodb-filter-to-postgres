@@ -382,6 +382,46 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("invalid comparison value (must be a primitive): [1 2]"),
 		},
+		{
+			"compare two fields",
+			nil,
+			`{"playerCount": {"$lt": {"$field": "maxPlayers"}}}`,
+			`("playerCount" < "maxPlayers")`,
+			nil,
+			nil,
+		},
+		{
+			"compare two jsonb fields",
+			filter.WithNestedJSONB("meta"),
+			`{"foo": {"$eq": {"$field": "bar"}}}`,
+			`("meta"->>'foo' = "meta"->>'bar')`,
+			nil,
+			nil,
+		},
+		{
+			"compare two jsonb fields with numeric comparison",
+			filter.WithNestedJSONB("meta"),
+			`{"foo": {"$lt": {"$field": "bar"}}}`,
+			`(("meta"->>'foo')::numeric < ("meta"->>'bar')::numeric)`,
+			nil,
+			nil,
+		},
+		{
+			"compare two fields with simple expression",
+			filter.WithNestedJSONB("meta", "foo"),
+			`{"foo": {"$field": "bar"}}`,
+			`("foo" = "meta"->>'bar')`,
+			nil,
+			nil,
+		},
+		{
+			"compare with invalid object",
+			nil,
+			`{"name": {"$eq": {"foo": "bar"}}}`,
+			``,
+			nil,
+			fmt.Errorf("invalid value for $eq operator (must be object with $field key): map[foo:bar]"),
+		},
 	}
 
 	for _, tt := range tests {

@@ -127,7 +127,7 @@ func createPlayersTable(t *testing.T, db *sql.DB) {
 			("id", "name",    "metadata",                                           "level", "class",    "mount",   "items",              "parents") VALUES
 			(1,    'Alice',   '{"guild_id": 20, "pet": "dog"                    }', 10,      'warrior',  'horse',   '{}',                 '{40, 60}'),
 			(2,    'Bob',	  '{"guild_id": 20, "pet": "cat", "keys": [1, 3]    }', 20,      'mage',     'horse',   '{}',                 '{20, 30}'),
-			(3,    'Charlie', '{"guild_id": 30, "pet": "dog", "keys": [4, 6]    }', 30,      'rogue',    NULL,      '{}',                 '{30, 50}'),
+			(3,    'Charlie', '{"guild_id": 30, "pet": "dog", "keys": [4, 6]    }', 30,      'dog',      NULL,      '{}',                 '{30, 50}'),
 			(4,    'David',   '{"guild_id": 30, "pet": "cat"                    }', 40,      'warrior',  NULL,      '{}',                 '{}'),
 			(5,    'Eve',     '{"guild_id": 40, "pet": "dog", "hats": ["helmet"]}', 50,      'mage',     'griffon', '{"staff", "cloak"}', '{}'),
 			(6,    'Frank',   '{"guild_id": 40, "pet": "cat", "hats": ["cap"]   }', 60,      'rogue',    'griffon', '{"dagger"}',         '{}'),
