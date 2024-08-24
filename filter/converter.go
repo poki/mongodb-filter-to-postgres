@@ -256,31 +256,24 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 
 						// If the value is a map with a $field key, we need to compare the column to another column.
 						if vv, ok := value.(map[string]any); ok {
-							if field, ok := vv["$field"].(string); ok {
-								if isNumericOperator {
-									if c.isNestedColumn(key) {
-										if c.isNestedColumn(field) {
-											// (a->>b)::numeric > (c->>d)::numeric
-											inner = append(inner, fmt.Sprintf("((%s)::numeric %s (%s)::numeric)", c.columnName(key), op, c.columnName(field)))
-										} else {
-											// (a->>b)::numeric > c
-											inner = append(inner, fmt.Sprintf("((%s)::numeric %s %s)", c.columnName(key), op, c.columnName(field)))
-										}
-									} else {
-										if c.isNestedColumn(field) {
-											// a > (c->>d)::numeric
-											inner = append(inner, fmt.Sprintf("(%s %s (%s)::numeric)", c.columnName(key), op, c.columnName(field)))
-										} else {
-											// a > c
-											inner = append(inner, fmt.Sprintf("(%s %s %s)", c.columnName(key), op, c.columnName(field)))
-										}
-									}
-								} else {
-									inner = append(inner, fmt.Sprintf("(%s %s %s)", c.columnName(key), op, c.columnName(field)))
-								}
-							} else {
-								return "", nil, fmt.Errorf("invalid value for %s operator (must be object with $field key): %v", operator, value)
+							field, ok := vv["$field"].(string)
+							if !ok || len(vv) > 1 {
+								return "", nil, fmt.Errorf("invalid value for %s operator (must be object with $field key only): %v", operator, value)
 							}
+
+							left := c.columnName(key)
+							right := c.columnName(field)
+
+							if isNumericOperator {
+								if c.isNestedColumn(key) {
+									left = fmt.Sprintf("(%s)::numeric", left)
+								}
+								if c.isNestedColumn(field) {
+									right = fmt.Sprintf("(%s)::numeric", right)
+								}
+							}
+
+							inner = append(inner, fmt.Sprintf("(%s %s %s)", left, op, right))
 						} else {
 							// Prevent cryptic errors like:
 							// 	 unexpected error: sql: converting argument $1 type: unsupported type []interface {}, a slice of interface

@@ -420,7 +420,7 @@ func TestConverter_Convert(t *testing.T) {
 			`{"name": {"$eq": {"foo": "bar"}}}`,
 			``,
 			nil,
-			fmt.Errorf("invalid value for $eq operator (must be object with $field key): map[foo:bar]"),
+			fmt.Errorf("invalid value for $eq operator (must be object with $field key only): map[foo:bar]"),
 		},
 	}
 
