@@ -104,6 +104,8 @@ For example:
 }
 ```
 
+Some comparisons have limitations.`>`, `>=`, `<` and `<=` only work on non-jsob fields if they are numeric.
+
 
 ## Contributing
 
