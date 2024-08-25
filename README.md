@@ -95,8 +95,7 @@ values := []any{"aztec", "nuke", "", 2, 10}
 
 ## Difference with MongoDB
 
-The MongoDB query filters don't have the option to compare fields with each other. This package adds the `$field` operator to compare fields with each other.
-
+- The MongoDB query filters don't have the option to compare fields with each other. This package adds the `$field` operator to compare fields with each other.  
 For example:
 ```json5
 {
