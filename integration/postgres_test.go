@@ -399,6 +399,48 @@ func TestIntegration_BasicOperators(t *testing.T) {
 			[]int{},
 			nil,
 		},
+		{
+			"string order comparison",
+			`{"pet": {"$lt": "dog"}}`,
+			[]int{2, 4, 6, 8},
+			nil,
+		},
+		{
+			"compare two fields",
+			`{"level": {"$lt": { "$field": "guild_id" }}}`,
+			[]int{1},
+			nil,
+		},
+		{
+			"compare two string fields",
+			`{"name": {"$field": "pet"}}`,
+			[]int{},
+			nil,
+		},
+		{
+			"compare two string fields with jsonb",
+			`{"pet": {"$field": "class"}}`,
+			[]int{3},
+			nil,
+		},
+		{
+			// This converts to: ("level" = "metadata"->>'guild_id')
+			// This currently doesn't work, because we don't know the type of the columns.
+			// 'level' is an integer column, 'guild_id' is a jsonb column which always gets converted to a string.
+			"compare two numeric fields",
+			`{"level": {"$field": "guild_id"}}`,
+			nil,
+			errors.New(`pq: operator does not exist: integer = text`),
+		},
+		{
+			// This converts to: (("metadata"->>'pet')::numeric < "class")
+			// This currently doesn't work, because we always convert < etc to a numeric comparison.
+			// We don't know the type of the columns, so we can't convert it to a string comparison.
+			"string order comparison with two fields",
+			`{"pet": {"$lt": {"$field": "class"}}}`,
+			nil,
+			errors.New(`pq: operator does not exist: numeric < text`),
+		},
 	}
 
 	for _, tt := range tests {

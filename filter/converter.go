@@ -235,6 +235,13 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							inner = append(inner, fmt.Sprintf("EXISTS (SELECT 1 FROM unnest(%s) AS %s WHERE %s)", c.columnName(key), c.placeholderName, innerConditions))
 						}
 						values = append(values, innerValues...)
+					case "$field":
+						vv, ok := v[operator].(string)
+						if !ok {
+							return "", nil, fmt.Errorf("invalid value for $field operator (must be string): %v", v[operator])
+						}
+
+						inner = append(inner, fmt.Sprintf("(%s = %s)", c.columnName(key), c.columnName(vv)))
 					default:
 						value := v[operator]
 						isNumericOperator := false
@@ -247,19 +254,41 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							isNumericOperator = true
 						}
 
-						// Prevent cryptic errors like:
-						// 	 unexpected error: sql: converting argument $1 type: unsupported type []interface {}, a slice of interface
-						if !isScalar(value) {
-							return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
-						}
+						// If the value is a map with a $field key, we need to compare the column to another column.
+						if vv, ok := value.(map[string]any); ok {
+							field, ok := vv["$field"].(string)
+							if !ok || len(vv) > 1 {
+								return "", nil, fmt.Errorf("invalid value for %s operator (must be object with $field key only): %v", operator, value)
+							}
 
-						if isNumericOperator && isNumeric(value) && c.isNestedColumn(key) {
-							inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
+							left := c.columnName(key)
+							right := c.columnName(field)
+
+							if isNumericOperator {
+								if c.isNestedColumn(key) {
+									left = fmt.Sprintf("(%s)::numeric", left)
+								}
+								if c.isNestedColumn(field) {
+									right = fmt.Sprintf("(%s)::numeric", right)
+								}
+							}
+
+							inner = append(inner, fmt.Sprintf("(%s %s %s)", left, op, right))
 						} else {
-							inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+							// Prevent cryptic errors like:
+							// 	 unexpected error: sql: converting argument $1 type: unsupported type []interface {}, a slice of interface
+							if !isScalar(value) {
+								return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
+							}
+
+							if isNumericOperator && isNumeric(value) && c.isNestedColumn(key) {
+								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
+							} else {
+								inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key), op, paramIndex))
+							}
+							paramIndex++
+							values = append(values, value)
 						}
-						paramIndex++
-						values = append(values, value)
 					}
 				}
 				innerResult := strings.Join(inner, " AND ")

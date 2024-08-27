@@ -7,9 +7,10 @@ _It's designed to be simple, secure, and free of dependencies._
 When filtering data based on user-generated inputs, you need a syntax that's both intuitive and reliable. MongoDB's query filter is an excellent choice because it's simple, widely understood, and battle-tested in real-world applications. Although this package doesn't interact with MongoDB, it uses the same syntax to simplify filtering.
 
 ### Supported Features:
-- Basics: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$regex`
-- Logical operators: `$and`, `$or`
-- Array operators: `$in`
+- Basics: `$eq`, `$ne`, `$gt`, `$gte`, `$lt`, `$lte`, `$regex`, `$exists`
+- Logical operators: `$and`, `$or`, `$not`, `$nor`
+- Array operators: `$in`, `$nin`, `$elemMatch`
+- Field comparison: `$field` (see [#difference-with-mongodb](#difference-with-mongodb))
 
 This package is intended for use with PostgreSQL drivers like [github.com/lib/pq](https://github.com/lib/pq) and [github.com/jackc/pgx](https://github.com/jackc/pgx). However, it can work with any driver that supports the database/sql package.
 
@@ -90,6 +91,19 @@ AND (
 values := []any{"aztec", "nuke", "", 2, 10}
 ```
 (given "customdata" is configured with `filter.WithNestedJSONB("customdata", "password", "playerCount")`)
+
+
+## Difference with MongoDB
+
+- The MongoDB query filters don't have the option to compare fields with each other. This package adds the `$field` operator to compare fields with each other.  
+For example:
+```json5
+{
+  "playerCount": { "$lt": { "$field": "maxPlayers" } }
+}
+```
+
+- Some comparisons have limitations.`>`, `>=`, `<` and `<=` only work on non-jsob fields if they are numeric.
 
 
 ## Contributing
