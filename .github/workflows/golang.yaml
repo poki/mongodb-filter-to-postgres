@@ -81,14 +81,14 @@ jobs:
         go-version: '1.22.2'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v4
-    - uses: golangci/golangci-lint-action@v5
+    - uses: golangci/golangci-lint-action@v6
       with:
         version: 'v1.57.2'
-    - uses: golangci/golangci-lint-action@v5
+    - uses: golangci/golangci-lint-action@v6
       with:
         working-directory: 'fuzz'
         version: 'v1.57.2'
-    - uses: golangci/golangci-lint-action@v5
+    - uses: golangci/golangci-lint-action@v6
       with:
         working-directory: 'integration'
         version: 'v1.57.2'
