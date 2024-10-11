@@ -8,7 +8,10 @@ import (
 
 func ExampleNewConverter_readme() {
 	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
-	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	converter, err := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	if err != nil {
+		// handle error
+	}
 
 	mongoFilterQuery := `{
 		"$and": [

@@ -30,9 +30,12 @@ const defaultPlaceholderName = "__filter_placeholder"
 
 // Converter converts MongoDB filter queries to SQL conditions and values. Use [filter.NewConverter] to create a new instance.
 type Converter struct {
-	nestedColumn     string
-	nestedExemptions []string
-	arrayDriver      func(a any) interface {
+	allowAllColumns   bool
+	allowedColumns    []string
+	disallowedColumns []string
+	nestedColumn      string
+	nestedExemptions  []string
+	arrayDriver       func(a any) interface {
 		driver.Valuer
 		sql.Scanner
 	}
@@ -45,16 +48,23 @@ type Converter struct {
 // NewConverter creates a new [Converter] with optional nested JSONB field mapping.
 //
 // Note: When using https://github.com/lib/pq, the [filter.WithArrayDriver] should be set to pq.Array.
-func NewConverter(options ...Option) *Converter {
+func NewConverter(options ...Option) (*Converter, error) {
 	converter := &Converter{
 		// don't set defaults, use the once.Do in #Convert()
 	}
+	seenAccessOption := false
 	for _, option := range options {
-		if option != nil {
-			option(converter)
+		if option.f != nil {
+			option.f(converter)
+		}
+		if option.isAccessOption {
+			seenAccessOption = true
 		}
 	}
-	return converter
+	if !seenAccessOption {
+		return nil, ErrNoAccessOption
+	}
+	return converter, nil
 }
 
 // Convert converts a MongoDB filter query into SQL conditions and values.
@@ -164,6 +174,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 		default:
 			if !isValidPostgresIdentifier(key) {
 				return "", nil, fmt.Errorf("invalid column name: %s", key)
+			}
+			if !c.isColumnAllowed(key) {
+				return "", nil, ColumnNotAllowedError{Column: key}
 			}
 
 			switch v := value.(type) {
@@ -344,6 +357,26 @@ func (c *Converter) columnName(column string) string {
 		}
 	}
 	return fmt.Sprintf(`%q->>'%s'`, c.nestedColumn, column)
+}
+
+func (c *Converter) isColumnAllowed(column string) bool {
+	for _, disallowed := range c.disallowedColumns {
+		if disallowed == column {
+			return false
+		}
+	}
+	if c.allowAllColumns {
+		return true
+	}
+	if c.nestedColumn != "" {
+		return true
+	}
+	for _, allowed := range c.allowedColumns {
+		if allowed == column {
+			return true
+		}
+	}
+	return false
 }
 
 func (c *Converter) isNestedColumn(column string) bool {

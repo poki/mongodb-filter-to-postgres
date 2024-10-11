@@ -5,7 +5,40 @@ import (
 	"database/sql/driver"
 )
 
-type Option func(*Converter)
+type Option struct {
+	f              func(*Converter)
+	isAccessOption bool
+}
+
+// WithAllowAllColumns is the option to allow all columns in the query.
+func WithAllowAllColumns() Option {
+	return Option{
+		f: func(c *Converter) {
+			c.allowAllColumns = true
+		},
+		isAccessOption: true,
+	}
+}
+
+// WithAllowColumns is an option to allow only the specified columns in the query.
+func WithAllowColumns(columns ...string) Option {
+	return Option{
+		f: func(c *Converter) {
+			c.allowedColumns = append(c.allowedColumns, columns...)
+		},
+		isAccessOption: true,
+	}
+}
+
+// WithDisallowColumns is an option to disallow the specified columns in the query.
+func WithDisallowColumns(columns ...string) Option {
+	return Option{
+		f: func(c *Converter) {
+			c.disallowedColumns = append(c.disallowedColumns, columns...)
+		},
+		isAccessOption: true,
+	}
+}
 
 // WithNestedJSONB is an option to specify the column name that contains the nested
 // JSONB object. (e.g. you have a column named `metadata` that contains a nested
@@ -18,9 +51,12 @@ type Option func(*Converter)
 //
 //	c := filter.NewConverter(filter.WithNestedJSONB("metadata", "created_at", "updated_at"))
 func WithNestedJSONB(column string, exemption ...string) Option {
-	return func(c *Converter) {
-		c.nestedColumn = column
-		c.nestedExemptions = exemption
+	return Option{
+		f: func(c *Converter) {
+			c.nestedColumn = column
+			c.nestedExemptions = exemption
+		},
+		isAccessOption: true,
 	}
 }
 
@@ -35,8 +71,10 @@ func WithArrayDriver(f func(a any) interface {
 	driver.Valuer
 	sql.Scanner
 }) Option {
-	return func(c *Converter) {
-		c.arrayDriver = f
+	return Option{
+		f: func(c *Converter) {
+			c.arrayDriver = f
+		},
 	}
 }
 
@@ -45,8 +83,10 @@ func WithArrayDriver(f func(a any) interface {
 //
 // The default value is `FALSE`, because it's the safer choice in most cases.
 func WithEmptyCondition(condition string) Option {
-	return func(c *Converter) {
-		c.emptyCondition = condition
+	return Option{
+		f: func(c *Converter) {
+			c.emptyCondition = condition
+		},
 	}
 }
 
@@ -54,7 +94,9 @@ func WithEmptyCondition(condition string) Option {
 // used in the generated SQL query. This name should not be used in the database
 // or any JSONB column.
 func WithPlaceholderName(name string) Option {
-	return func(c *Converter) {
-		c.placeholderName = name
+	return Option{
+		f: func(c *Converter) {
+			c.placeholderName = name
+		},
 	}
 }
