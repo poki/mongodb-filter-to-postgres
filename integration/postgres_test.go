@@ -41,7 +41,7 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := filter.NewConverter(
+	c, _ := filter.NewConverter(
 		filter.WithArrayDriver(pq.Array),
 		filter.WithNestedJSONB("customData", "password", "playerCount"),
 	)
@@ -120,7 +120,7 @@ func TestIntegration_InAny_PQ(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+	c, _ := filter.NewConverter(filter.WithAllowAllColumns(), filter.WithArrayDriver(pq.Array))
 	in := `{
 		"role": { "$in": ["guest", "user"] }
 	}`
@@ -185,7 +185,7 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c := filter.NewConverter()
+	c, _ := filter.NewConverter()
 	in := `{
 		"role": { "$in": ["guest", "user"] }
 	}`
@@ -445,7 +445,7 @@ func TestIntegration_BasicOperators(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class", "mount", "items", "parents"))
+			c, _ := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class", "mount", "items", "parents"))
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
@@ -522,7 +522,7 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
+			c, _ := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)
@@ -590,7 +590,7 @@ func TestIntegration_Logic(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
+			c, _ := filter.NewConverter(filter.WithArrayDriver(pq.Array), filter.WithNestedJSONB("metadata", "name", "level", "class"))
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil {
 				t.Fatal(err)

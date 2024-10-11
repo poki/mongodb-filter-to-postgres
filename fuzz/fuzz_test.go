@@ -52,12 +52,13 @@ func FuzzConverter(f *testing.F) {
 
 	f.Fuzz(func(t *testing.T, in string, jsonb bool) {
 		options := []filter.Option{
+			filter.WithAllowAllColumns(),
 			filter.WithArrayDriver(pq.Array),
 		}
 		if jsonb {
 			options = append(options, filter.WithNestedJSONB("meta"))
 		}
-		c := filter.NewConverter(options...)
+		c, _ := filter.NewConverter(options...)
 		conditions, _, err := c.Convert([]byte(in), 1)
 		if err == nil && conditions != "" {
 			j, err := pg_query.ParseToJSON("SELECT * FROM test WHERE 1 AND " + conditions)
