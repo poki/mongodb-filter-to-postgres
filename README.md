@@ -32,8 +32,12 @@ import (
 
 func main() {
   // Create a converter with options:
+  // - WithAllowAllColumns: allow all columns to be filtered.
   // - WithArrayDriver: to convert arrays to the correct driver type, required when using lib/pq
-  converter := filter.NewConverter(filter.WithArrayDriver(pq.Array))
+  converter, err := filter.NewConverter(filter.WithAllowAllColumns(), filter.WithArrayDriver(pq.Array))
+	if err != nil {
+		// handle error
+	}
 
   // Convert a filter query to a WHERE clause and values:
   input := []byte(`{"title": "Jurassic Park"}`)
