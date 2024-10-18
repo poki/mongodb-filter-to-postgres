@@ -579,34 +579,49 @@ func TestConverter_AccessControl(t *testing.T) {
 
 	t.Run("allow all, single root field",
 		f(`{"name":"John"}`, nil, filter.WithAllowAllColumns()))
+
 	t.Run("allow name, single allowed root field",
 		f(`{"name":"John"}`, nil, filter.WithAllowColumns("name")))
+
 	t.Run("allow name, single disallowed root field",
 		f(`{"password":"hacks"}`, no("password"), filter.WithAllowColumns("name")))
+
 	t.Run("allowed meta, single allowed nested field",
 		f(`{"map":"de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at")))
+
 	t.Run("allowed nested excemption, single allowed field",
 		f(`{"created_at":"de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at")))
+
 	t.Run("multi allow, single allowed root field",
 		f(`{"name":"John"}`, nil, filter.WithAllowColumns("name", "email")))
+
 	t.Run("multi allow, two allowed root fields",
 		f(`{"name":"John", "email":"test@example.org"}`, nil, filter.WithAllowColumns("name", "email")))
+
 	t.Run("multi allow, mixes access",
 		f(`{"name":"John", "password":"hacks"}`, no("password"), filter.WithAllowColumns("name", "email")))
+
 	t.Run("multi allow, mixes access",
 		f(`{"name":"John", "password":"hacks"}`, no("password"), filter.WithAllowColumns("name", "email")))
+
 	t.Run("allowed basic $and",
 		f(`{"$and": [{"name": "John"}, {"version": 3}]}`, nil, filter.WithAllowColumns("name", "version")))
+
 	t.Run("disallowed basic $and",
 		f(`{"$and": [{"name": "John"}, {"version": 3}]}`, no("version"), filter.WithAllowColumns("name")))
+
 	t.Run("allow all but one",
 		f(`{"name": "John"}`, nil, filter.WithAllowAllColumns(), filter.WithDisallowColumns("password")))
+
 	t.Run("allow all but one, failing",
 		f(`{"$and": [{"name": "John"}, {"password": "hacks"}]}`, no("password"), filter.WithAllowAllColumns(), filter.WithDisallowColumns("password")))
+
 	t.Run("nested but disallow password, allow exception",
 		f(`{"created_at": "1"}`, nil, filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
+
 	t.Run("nested but disallow password, allow nested",
 		f(`{"map": "de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
+
 	t.Run("nested but disallow password, disallow",
 		f(`{"password": "hacks"}`, no("password"), filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
 }
