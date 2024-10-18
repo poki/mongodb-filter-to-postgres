@@ -499,21 +499,9 @@ func TestConverter_WithEmptyCondition(t *testing.T) {
 }
 
 func TestConverter_NoConstructor(t *testing.T) {
-	t.Skip() // this is currently not supported since we introduced the access control options
-
 	c := &filter.Converter{}
-	conditions, values, err := c.Convert([]byte(`{"name": "John"}`), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := `("name" = $1)`; conditions != want {
-		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
-	}
-	if !reflect.DeepEqual(values, []any{"John"}) {
-		t.Errorf("Converter.Convert() values = %v, want %v", values, []any{"John"})
-	}
 
-	conditions, values, err = c.Convert([]byte(``), 1)
+	conditions, values, err := c.Convert([]byte(``), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,6 +510,11 @@ func TestConverter_NoConstructor(t *testing.T) {
 	}
 	if len(values) != 0 {
 		t.Errorf("Converter.Convert() values = %v, want nil", values)
+	}
+
+	_, _, err = c.Convert([]byte(`{"name": "John"}`), 1)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
 
