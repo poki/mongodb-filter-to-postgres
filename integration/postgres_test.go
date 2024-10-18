@@ -185,7 +185,7 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, _ := filter.NewConverter()
+	c, _ := filter.NewConverter(filter.WithAllowAllColumns())
 	in := `{
 		"role": { "$in": ["guest", "user"] }
 	}`
