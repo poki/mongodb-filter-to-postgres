@@ -9,7 +9,10 @@ import (
 
 func ExampleNewConverter() {
 	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
-	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	converter, err := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	if err != nil {
+		// handle error
+	}
 
 	mongoFilterQuery := `{
 		"name": "John",
@@ -30,7 +33,10 @@ func ExampleNewConverter() {
 }
 
 func ExampleNewConverter_emptyfilter() {
-	converter := filter.NewConverter(filter.WithEmptyCondition("TRUE")) // The default is FALSE if you don't change it.
+	converter, err := filter.NewConverter(filter.WithAllowAllColumns(), filter.WithEmptyCondition("TRUE")) // The default is FALSE if you don't change it.
+	if err != nil {
+		// handle error
+	}
 
 	mongoFilterQuery := `{}`
 	conditions, _, err := converter.Convert([]byte(mongoFilterQuery), 1)
@@ -44,7 +50,10 @@ func ExampleNewConverter_emptyfilter() {
 }
 
 func ExampleNewConverter_nonIsolatedConditions() {
-	converter := filter.NewConverter()
+	converter, err := filter.NewConverter(filter.WithAllowAllColumns())
+	if err != nil {
+		// handle error
+	}
 
 	mongoFilterQuery := `{
 		"$or": [

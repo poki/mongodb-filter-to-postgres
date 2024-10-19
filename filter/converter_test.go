@@ -11,7 +11,10 @@ import (
 
 func ExampleNewConverter() {
 	// Remeber to use `filter.WithArrayDriver(pg.Array)` when using github.com/lib/pq
-	converter := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	converter, err := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at"))
+	if err != nil {
+		// handle error
+	}
 
 	mongoFilterQuery := `{
 		"name": "John",
@@ -33,7 +36,7 @@ func ExampleNewConverter() {
 func TestConverter_Convert(t *testing.T) {
 	tests := []struct {
 		name       string
-		option     filter.Option
+		option     []filter.Option
 		input      string
 		conditions string
 		values     []any
@@ -73,7 +76,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"nested jsonb single value",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"name": "John"}`,
 			`("meta"->>'name' = $1)`,
 			[]any{"John"},
@@ -81,7 +84,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"nested jsonb multi value",
-			filter.WithNestedJSONB("meta", "created_at", "updated_at"),
+			[]filter.Option{filter.WithNestedJSONB("meta", "created_at", "updated_at")},
 			`{"created_at": {"$gte": "2020-01-01T00:00:00Z"}, "name": "John", "role": "admin"}`,
 			`(("created_at" >= $1) AND ("meta"->>'name' = $2) AND ("meta"->>'role' = $3))`,
 			[]any{"2020-01-01T00:00:00Z", "John", "admin"},
@@ -296,7 +299,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"null jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"name": null}`,
 			`(jsonb_path_match(meta, 'exists($.name)') AND "meta"->>'name' IS NULL)`,
 			nil,
@@ -312,7 +315,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"not $exists jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"name": {"$exists": false}}`,
 			`(NOT jsonb_path_match(meta, 'exists($.name)'))`,
 			nil,
@@ -320,7 +323,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"$exists jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"name": {"$exists": true}}`,
 			`(jsonb_path_match(meta, 'exists($.name)'))`,
 			nil,
@@ -344,7 +347,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"$elemMatch on jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"name": {"$elemMatch": {"$eq": "John"}}}`,
 			`EXISTS (SELECT 1 FROM jsonb_array_elements("meta"->'name') AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))`,
 			[]any{"John"},
@@ -352,7 +355,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"$elemMatch with $gt",
-			filter.WithPlaceholderName("__placeholder"),
+			[]filter.Option{filter.WithAllowAllColumns(), filter.WithPlaceholderName("__placeholder")},
 			`{"age": {"$elemMatch": {"$gt": 18}}}`,
 			`EXISTS (SELECT 1 FROM unnest("age") AS __placeholder WHERE ("__placeholder"::text > $1))`,
 			[]any{float64(18)},
@@ -360,7 +363,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"numeric comparison bug with jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"foo": {"$gt": 0}}`,
 			`(("meta"->>'foo')::numeric > $1)`,
 			[]any{float64(0)},
@@ -368,7 +371,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"numeric comparison against null with jsonb column",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"foo": {"$gt": null}}`,
 			`("meta"->>'foo' > $1)`,
 			[]any{nil},
@@ -392,7 +395,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"compare two jsonb fields",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"foo": {"$eq": {"$field": "bar"}}}`,
 			`("meta"->>'foo' = "meta"->>'bar')`,
 			nil,
@@ -400,7 +403,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"compare two jsonb fields with numeric comparison",
-			filter.WithNestedJSONB("meta"),
+			[]filter.Option{filter.WithNestedJSONB("meta")},
 			`{"foo": {"$lt": {"$field": "bar"}}}`,
 			`(("meta"->>'foo')::numeric < ("meta"->>'bar')::numeric)`,
 			nil,
@@ -408,7 +411,7 @@ func TestConverter_Convert(t *testing.T) {
 		},
 		{
 			"compare two fields with simple expression",
-			filter.WithNestedJSONB("meta", "foo"),
+			[]filter.Option{filter.WithNestedJSONB("meta", "foo")},
 			`{"foo": {"$field": "bar"}}`,
 			`("foo" = "meta"->>'bar')`,
 			nil,
@@ -426,7 +429,13 @@ func TestConverter_Convert(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			c := filter.NewConverter(tt.option)
+			if tt.option == nil {
+				tt.option = []filter.Option{filter.WithAllowAllColumns()}
+			}
+			c, err := filter.NewConverter(tt.option...)
+			if err != nil {
+				t.Fatal(err)
+			}
 			conditions, values, err := c.Convert([]byte(tt.input), 1)
 			if err != nil && (tt.err == nil || err.Error() != tt.err.Error()) {
 				t.Errorf("Converter.Convert() error = %v, wantErr %v", err, tt.err)
@@ -447,7 +456,7 @@ func TestConverter_Convert(t *testing.T) {
 }
 
 func TestConverter_Convert_startAtParameterIndex(t *testing.T) {
-	c := filter.NewConverter()
+	c, _ := filter.NewConverter(filter.WithAllowAllColumns())
 	conditions, values, err := c.Convert([]byte(`{"name": "John", "password": "secret"}`), 10)
 	if err != nil {
 		t.Fatal(err)
@@ -476,7 +485,7 @@ func TestConverter_Convert_startAtParameterIndex(t *testing.T) {
 }
 
 func TestConverter_WithEmptyCondition(t *testing.T) {
-	c := filter.NewConverter(filter.WithEmptyCondition("TRUE"))
+	c, _ := filter.NewConverter(filter.WithAllowAllColumns(), filter.WithEmptyCondition("TRUE"))
 	conditions, values, err := c.Convert([]byte(`{}`), 1)
 	if err != nil {
 		t.Fatal(err)
@@ -491,18 +500,8 @@ func TestConverter_WithEmptyCondition(t *testing.T) {
 
 func TestConverter_NoConstructor(t *testing.T) {
 	c := &filter.Converter{}
-	conditions, values, err := c.Convert([]byte(`{"name": "John"}`), 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if want := `("name" = $1)`; conditions != want {
-		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
-	}
-	if !reflect.DeepEqual(values, []any{"John"}) {
-		t.Errorf("Converter.Convert() values = %v, want %v", values, []any{"John"})
-	}
 
-	conditions, values, err = c.Convert([]byte(``), 1)
+	conditions, values, err := c.Convert([]byte(``), 1)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -511,6 +510,11 @@ func TestConverter_NoConstructor(t *testing.T) {
 	}
 	if len(values) != 0 {
 		t.Errorf("Converter.Convert() values = %v, want nil", values)
+	}
+
+	_, _, err = c.Convert([]byte(`{"name": "John"}`), 1)
+	if err == nil {
+		t.Fatal("expected error, got nil")
 	}
 }
 
@@ -523,4 +527,101 @@ func TestConverter_CopyReference(t *testing.T) {
 	if want := "FALSE"; conditions != want {
 		t.Errorf("Converter.Convert() conditions = %v, want %v", conditions, want)
 	}
+}
+
+func TestConverter_RequireAccessControl(t *testing.T) {
+	if _, err := filter.NewConverter(); err != filter.ErrNoAccessOption {
+		t.Errorf("NewConverter() error = %v, want %v", err, filter.ErrNoAccessOption)
+	}
+	if _, err := filter.NewConverter(filter.WithPlaceholderName("___test___")); err != filter.ErrNoAccessOption {
+		t.Errorf("NewConverter() error = %v, want %v", err, filter.ErrNoAccessOption)
+	}
+	if _, err := filter.NewConverter(filter.WithAllowAllColumns()); err != nil {
+		t.Errorf("NewConverter() error = %v, want no error", err)
+	}
+	if _, err := filter.NewConverter(filter.WithAllowColumns("name", "map")); err != nil {
+		t.Errorf("NewConverter() error = %v, want no error", err)
+	}
+	if _, err := filter.NewConverter(filter.WithAllowColumns()); err != nil {
+		t.Errorf("NewConverter() error = %v, want no error", err)
+	}
+	if _, err := filter.NewConverter(filter.WithNestedJSONB("meta", "created_at", "updated_at")); err != nil {
+		t.Errorf("NewConverter() error = %v, want no error", err)
+	}
+	if _, err := filter.NewConverter(filter.WithDisallowColumns("password")); err != nil {
+		t.Errorf("NewConverter() error = %v, want no error", err)
+	}
+}
+
+func TestConverter_AccessControl(t *testing.T) {
+	f := func(in string, wantErr error, options ...filter.Option) func(t *testing.T) {
+		t.Helper()
+		return func(t *testing.T) {
+			t.Helper()
+			c := &filter.Converter{}
+			if options != nil {
+				c, _ = filter.NewConverter(options...)
+				// requirement of access control is tested above.
+			}
+			q, _, err := c.Convert([]byte(in), 1)
+			t.Log(in, "->", q, err)
+			if wantErr == nil && err != nil {
+				t.Fatalf("no error returned, expected error: %v", err)
+			} else if wantErr != nil && err == nil {
+				t.Fatalf("expected error: %v", wantErr)
+			} else if wantErr != nil && wantErr.Error() != err.Error() {
+				t.Fatalf("error mismatch: %v != %v", err, wantErr)
+			}
+		}
+	}
+
+	no := func(c string) error { return filter.ColumnNotAllowedError{Column: c} }
+
+	t.Run("allow all, single root field",
+		f(`{"name":"John"}`, nil, filter.WithAllowAllColumns()))
+
+	t.Run("allow name, single allowed root field",
+		f(`{"name":"John"}`, nil, filter.WithAllowColumns("name")))
+
+	t.Run("allow name, single disallowed root field",
+		f(`{"password":"hacks"}`, no("password"), filter.WithAllowColumns("name")))
+
+	t.Run("allowed meta, single allowed nested field",
+		f(`{"map":"de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at")))
+
+	t.Run("allowed nested excemption, single allowed field",
+		f(`{"created_at":"de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at")))
+
+	t.Run("multi allow, single allowed root field",
+		f(`{"name":"John"}`, nil, filter.WithAllowColumns("name", "email")))
+
+	t.Run("multi allow, two allowed root fields",
+		f(`{"name":"John", "email":"test@example.org"}`, nil, filter.WithAllowColumns("name", "email")))
+
+	t.Run("multi allow, mixes access",
+		f(`{"name":"John", "password":"hacks"}`, no("password"), filter.WithAllowColumns("name", "email")))
+
+	t.Run("multi allow, mixes access",
+		f(`{"name":"John", "password":"hacks"}`, no("password"), filter.WithAllowColumns("name", "email")))
+
+	t.Run("allowed basic $and",
+		f(`{"$and": [{"name": "John"}, {"version": 3}]}`, nil, filter.WithAllowColumns("name", "version")))
+
+	t.Run("disallowed basic $and",
+		f(`{"$and": [{"name": "John"}, {"version": 3}]}`, no("version"), filter.WithAllowColumns("name")))
+
+	t.Run("allow all but one",
+		f(`{"name": "John"}`, nil, filter.WithAllowAllColumns(), filter.WithDisallowColumns("password")))
+
+	t.Run("allow all but one, failing",
+		f(`{"$and": [{"name": "John"}, {"password": "hacks"}]}`, no("password"), filter.WithAllowAllColumns(), filter.WithDisallowColumns("password")))
+
+	t.Run("nested but disallow password, allow exception",
+		f(`{"created_at": "1"}`, nil, filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
+
+	t.Run("nested but disallow password, allow nested",
+		f(`{"map": "de_dust"}`, nil, filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
+
+	t.Run("nested but disallow password, disallow",
+		f(`{"password": "hacks"}`, no("password"), filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
 }
