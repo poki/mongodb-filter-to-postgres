@@ -29,7 +29,7 @@ func setupPQ(t *testing.T) *sql.DB {
 		return db.PingContext(ctx)
 	})
 	t.Cleanup(func() {
-		db.Close()
+		db.Close() //nolint:errcheck
 	})
 
 	return db
