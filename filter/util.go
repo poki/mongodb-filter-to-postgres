@@ -58,7 +58,7 @@ func isValidPostgresIdentifier(s string) bool {
 	}
 
 	// The first character needs to be a letter or _
-	if !(s[0] >= 'a' && s[0] <= 'z') && !(s[0] >= 'A' && s[0] <= 'Z') && s[0] != '_' {
+	if (s[0] < 'a' || s[0] > 'z') && (s[0] < 'A' || s[0] > 'Z') && s[0] != '_' {
 		return false
 	}
 

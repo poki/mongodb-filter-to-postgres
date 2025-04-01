@@ -73,7 +73,6 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
 	ids := []int{}
 	for rows.Next() {
 		var id int
@@ -81,6 +80,9 @@ func TestIntegration_ReadmeExample(t *testing.T) {
 			t.Fatal(err)
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
 
 	if len(ids) != 2 {
@@ -137,7 +139,6 @@ func TestIntegration_InAny_PQ(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
 	ids := []int{}
 	for rows.Next() {
 		var id int
@@ -145,6 +146,9 @@ func TestIntegration_InAny_PQ(t *testing.T) {
 			t.Fatal(err)
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
 
 	if len(ids) != 8 {
@@ -202,7 +206,6 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer rows.Close()
 	ids := []int{}
 	for rows.Next() {
 		var id int
@@ -210,6 +213,9 @@ func TestIntegration_InAny_PGX(t *testing.T) {
 			t.Fatal(err)
 		}
 		ids = append(ids, id)
+	}
+	if err := rows.Err(); err != nil {
+		t.Fatal(err)
 	}
 
 	if len(ids) != 8 {
@@ -466,7 +472,6 @@ func TestIntegration_BasicOperators(t *testing.T) {
 				}
 				return
 			}
-			defer rows.Close()
 			players := []int{}
 			for rows.Next() {
 				var id int
@@ -474,6 +479,9 @@ func TestIntegration_BasicOperators(t *testing.T) {
 					t.Fatal(err)
 				}
 				players = append(players, id)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
@@ -536,7 +544,6 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer rows.Close()
 			players := []int{}
 			for rows.Next() {
 				var id int
@@ -544,6 +551,9 @@ func TestIntegration_NestedJSONB(t *testing.T) {
 					t.Fatal(err)
 				}
 				players = append(players, id)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
@@ -604,7 +614,6 @@ func TestIntegration_Logic(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			defer rows.Close()
 			players := []int{}
 			for rows.Next() {
 				var id int
@@ -612,6 +621,9 @@ func TestIntegration_Logic(t *testing.T) {
 					t.Fatal(err)
 				}
 				players = append(players, id)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
 			}
 
 			if !reflect.DeepEqual(players, tt.expectedPlayers) {
