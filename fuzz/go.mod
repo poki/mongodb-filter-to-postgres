@@ -1,6 +1,8 @@
 module github.com/poki/mongodb-filter-to-postgres/fuzz
 
-go 1.18
+go 1.22
+
+toolchain go1.24.1
 
 replace github.com/poki/mongodb-filter-to-postgres v0.0.0 => ../
 
@@ -10,4 +12,4 @@ require (
 	github.com/poki/mongodb-filter-to-postgres v0.0.0
 )
 
-require google.golang.org/protobuf v1.33.0 // indirect
+require google.golang.org/protobuf v1.36.6 // indirect
