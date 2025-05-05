@@ -87,8 +87,8 @@ jobs:
     - uses: golangci/golangci-lint-action@v8
       with:
         working-directory: 'fuzz'
-        version: 'v2.0.1'
+        version: 'v2.1.0'
     - uses: golangci/golangci-lint-action@v8
       with:
         working-directory: 'integration'
-        version: 'v2.0.1'
+        version: 'v2.1.0'
