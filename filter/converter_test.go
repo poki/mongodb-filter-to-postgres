@@ -425,6 +425,22 @@ func TestConverter_Convert(t *testing.T) {
 			nil,
 			fmt.Errorf("invalid value for $eq operator (must be object with $field key only): map[foo:bar]"),
 		},
+		{
+			"numeric comparison with nested jsonb",
+			[]filter.Option{filter.WithNestedJSONB("meta")},
+			`{"foo": 12}`,
+			`(("meta"->>'foo')::numeric = $1)`,
+			[]any{float64(12)},
+			nil,
+		},
+		{
+			"numeric comparison with nested jsonb with $eq",
+			[]filter.Option{filter.WithNestedJSONB("meta")},
+			`{"foo": { "$eq": 12 }}`,
+			`(("meta"->>'foo')::numeric = $1)`,
+			[]any{float64(12)},
+			nil,
+		},
 	}
 
 	for _, tt := range tests {

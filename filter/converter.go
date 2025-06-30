@@ -294,6 +294,15 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 								return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
 							}
 
+							// If we aren't comparing columns, and the field is a numeric scalar, we also see = ($eq) and != ($ne) as numeric operators.
+							// This way we can use ::numeric on jsonb values to prevent getting postgres errors like:
+							//   ERROR:  operator does not exist: text = numeric
+							if isNumeric(value) && !isNumericOperator {
+								if op == "=" || op == "!=" {
+									isNumericOperator = true
+								}
+							}
+
 							if isNumericOperator && isNumeric(value) && c.isNestedColumn(key) {
 								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key), op, paramIndex))
 							} else {
@@ -330,7 +339,12 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				if !isScalar(value) {
 					return "", nil, fmt.Errorf("invalid comparison value (must be a primitive): %v", value)
 				}
-				conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), paramIndex))
+				if isNumeric(value) && c.isNestedColumn(key) {
+					// If the value is numeric and the column is a nested JSONB column, we need to cast the column to numeric.
+					conditions = append(conditions, fmt.Sprintf("((%s)::numeric = $%d)", c.columnName(key), paramIndex))
+				} else {
+					conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key), paramIndex))
+				}
 				paramIndex++
 				values = append(values, value)
 			}
