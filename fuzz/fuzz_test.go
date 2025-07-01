@@ -8,7 +8,7 @@ import (
 	"github.com/lib/pq"
 	"github.com/poki/mongodb-filter-to-postgres/filter"
 
-	pg_query "github.com/pganalyze/pg_query_go/v5"
+	pg_query "github.com/pganalyze/pg_query_go/v6"
 )
 
 func FuzzConverter(f *testing.F) {
