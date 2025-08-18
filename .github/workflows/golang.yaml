@@ -21,7 +21,7 @@ jobs:
       with:
         go-version: '1.24.1'
         cache-dependency-path: "**/*.sum"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - run: go mod verify
     - run: go test ./...
 
@@ -33,7 +33,7 @@ jobs:
       with:
         go-version: '1.24.1'
         cache-dependency-path: "**/*.sum"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - run: go mod verify
     - run: go mod download
     - run: cd fuzz && go test ./...
@@ -46,7 +46,7 @@ jobs:
       with:
         go-version: '1.24.1'
         cache-dependency-path: "**/*.sum"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - run: go mod verify
     - run: go mod download
     - run: cd integration && go test ./...
@@ -63,7 +63,7 @@ jobs:
       with:
         go-version: '1.24.1'
         cache-dependency-path: "**/*.sum"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - run: go vet ./...
     - run: cd fuzz && go vet ./...
     - run: cd integration && go vet ./...
@@ -80,7 +80,7 @@ jobs:
       with:
         go-version: '1.24.1'
         cache-dependency-path: "**/*.sum"
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: golangci/golangci-lint-action@v8
       with:
         version: 'v2.1.0'
