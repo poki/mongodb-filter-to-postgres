@@ -97,6 +97,39 @@ values := []any{"aztec", "nuke", "", 2, 10}
 (given "customdata" is configured with `filter.WithNestedJSONB("customdata", "password", "playerCount")`)
 
 
+## Order By Support
+
+In addition to filtering, this package also supports converting MongoDB-style sort objects into PostgreSQL ORDER BY clauses using the `ConvertOrderBy` method:
+
+```go
+// Convert a sort object to an ORDER BY clause
+sortInput := []byte(`{"playerCount": -1, "name": 1}`)
+orderBy, err := converter.ConvertOrderBy(sortInput)
+if err != nil {
+  // handle error
+}
+fmt.Println(orderBy) // "playerCount" DESC, "name" ASC
+
+db.Query("SELECT * FROM games ORDER BY " + orderBy)
+```
+
+### Sort Direction Values:
+- `1`: Ascending (ASC)
+- `-1`: Descending (DESC)
+
+### JSONB Field Sorting:
+For JSONB fields, the package generates sophisticated ORDER BY clauses that handle both numeric and text sorting:
+
+```go
+// With WithNestedJSONB("metadata", "created_at"):
+sortInput := []byte(`{"score": -1}`)
+orderBy, err := converter.ConvertOrderBy(sortInput)
+// Generates: (CASE WHEN jsonb_typeof(metadata->'score') = 'number' THEN (metadata->>'score')::numeric END) DESC NULLS LAST, metadata->>'score' DESC NULLS LAST
+```
+
+This ensures proper sorting whether the JSONB field contains numeric or text values.
+
+
 ## Difference with MongoDB
 
 - The MongoDB query filters don't have the option to compare fields with each other. This package adds the `$field` operator to compare fields with each other.  

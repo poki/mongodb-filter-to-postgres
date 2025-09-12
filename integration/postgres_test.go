@@ -632,3 +632,101 @@ func TestIntegration_Logic(t *testing.T) {
 		})
 	}
 }
+
+func TestIntegration_OrderBy(t *testing.T) {
+	db := setupPQ(t)
+
+	createPlayersTable(t, db)
+
+	tests := []struct {
+		name          string
+		orderBy       string
+		expectedOrder []int // Expected player IDs in order
+		converterOpts []filter.Option
+	}{
+		{
+			"single field ascending",
+			`{"level": 1}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			[]filter.Option{filter.WithAllowAllColumns()},
+		},
+		{
+			"single field descending",
+			`{"level": -1}`,
+			[]int{10, 9, 8, 7, 6, 5, 4, 3, 2, 1},
+			[]filter.Option{filter.WithAllowAllColumns()},
+		},
+		{
+			"multiple fields",
+			`{"class": 1, "level": -1}`,
+			[]int{3, 8, 5, 2, 9, 6, 10, 7, 4, 1}, // dog, mage (desc level), rogue (desc level), warrior (desc level)
+			[]filter.Option{filter.WithAllowAllColumns()},
+		},
+		{
+			"jsonb field ascending",
+			`{"guild_id": 1}`,
+			[]int{1, 2, 3, 4, 5, 6, 7, 8, 9, 10},
+			[]filter.Option{filter.WithNestedJSONB("metadata", "name", "level", "class")},
+		},
+		{
+			"jsonb field descending",
+			`{"guild_id": -1}`,
+			[]int{10, 9, 7, 8, 6, 5, 4, 3, 1, 2}, // 60, 60, 50, 50, 40, 40, 30, 30, 20, 20 with secondary text sort
+			[]filter.Option{filter.WithNestedJSONB("metadata", "name", "level", "class")},
+		},
+		{
+			"mixed regular and jsonb fields",
+			`{"pet": 1, "level": -1}`,
+			[]int{8, 6, 4, 2, 7, 5, 3, 1, 10, 9}, // "cat" (desc level), then "dog" (desc level), then null/missing pets
+			[]filter.Option{filter.WithNestedJSONB("metadata", "name", "level", "class")},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c, err := filter.NewConverter(tt.converterOpts...)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			orderBy, err := c.ConvertOrderBy([]byte(tt.orderBy))
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			t.Logf("Generated ORDER BY: %s", orderBy)
+
+			rows, err := db.Query(`
+				SELECT id
+				FROM players
+				ORDER BY ` + orderBy + `;
+			`)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			var playerIDs []int
+			for rows.Next() {
+				var id int
+				if err := rows.Scan(&id); err != nil {
+					t.Fatal(err)
+				}
+				playerIDs = append(playerIDs, id)
+			}
+			if err := rows.Err(); err != nil {
+				t.Fatal(err)
+			}
+
+			if len(playerIDs) != len(tt.expectedOrder) {
+				t.Fatalf("expected %d players, got %d", len(tt.expectedOrder), len(playerIDs))
+			}
+
+			for i, expectedID := range tt.expectedOrder {
+				if playerIDs[i] != expectedID {
+					t.Fatalf("at position %d: expected player ID %d, got %d\nExpected order: %v\nActual order: %v",
+						i, expectedID, playerIDs[i], tt.expectedOrder, playerIDs)
+				}
+			}
+		})
+	}
+}

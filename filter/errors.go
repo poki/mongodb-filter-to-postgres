@@ -12,3 +12,12 @@ type ColumnNotAllowedError struct {
 func (e ColumnNotAllowedError) Error() string {
 	return fmt.Sprintf("column not allowed: %s", e.Column)
 }
+
+type InvalidOrderDirectionError struct {
+	Field string
+	Value any
+}
+
+func (e InvalidOrderDirectionError) Error() string {
+	return fmt.Sprintf("invalid order direction for field %s: %v (must be 1 or -1)", e.Field, e.Value)
+}
