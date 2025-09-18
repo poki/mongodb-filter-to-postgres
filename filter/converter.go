@@ -208,7 +208,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							// `column != ANY(...)` does not work, so we need to do `NOT column = ANY(...)` instead.
 							neg = "NOT "
 						}
-						inner = append(inner, fmt.Sprintf("(%s%s = ANY($%d))", neg, c.columnName(key, false), paramIndex))
+						inner = append(inner, fmt.Sprintf("(%s%s = ANY($%d))", neg, c.columnName(key, true), paramIndex))
 						paramIndex++
 						if c.arrayDriver != nil {
 							v[operator] = c.arrayDriver(v[operator])
@@ -245,7 +245,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							//
 							//   EXISTS (SELECT 1 FROM unnest("foo") AS __filter_placeholder WHERE ("__filter_placeholder"::text = $1))
 							//
-							inner = append(inner, fmt.Sprintf("EXISTS (SELECT 1 FROM unnest(%s) AS %s WHERE %s)", c.columnName(key, false), c.placeholderName, innerConditions))
+							inner = append(inner, fmt.Sprintf("EXISTS (SELECT 1 FROM unnest(%s) AS %s WHERE %s)", c.columnName(key, true), c.placeholderName, innerConditions))
 						}
 						values = append(values, innerValues...)
 					case "$field":
@@ -254,7 +254,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							return "", nil, fmt.Errorf("invalid value for $field operator (must be string): %v", v[operator])
 						}
 
-						inner = append(inner, fmt.Sprintf("(%s = %s)", c.columnName(key, false), c.columnName(vv, false)))
+						inner = append(inner, fmt.Sprintf("(%s = %s)", c.columnName(key, true), c.columnName(vv, true)))
 					default:
 						value := v[operator]
 						isNumericOperator := false
@@ -274,8 +274,8 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 								return "", nil, fmt.Errorf("invalid value for %s operator (must be object with $field key only): %v", operator, value)
 							}
 
-							left := c.columnName(key, false)
-							right := c.columnName(field, false)
+							left := c.columnName(key, true)
+							right := c.columnName(field, true)
 
 							if isNumericOperator {
 								if c.isNestedColumn(key) {
@@ -304,9 +304,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 							}
 
 							if isNumericOperator && isNumeric(value) && c.isNestedColumn(key) {
-								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key, false), op, paramIndex))
+								inner = append(inner, fmt.Sprintf("((%s)::numeric %s $%d)", c.columnName(key, true), op, paramIndex))
 							} else {
-								inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key, false), op, paramIndex))
+								inner = append(inner, fmt.Sprintf("(%s %s $%d)", c.columnName(key, true), op, paramIndex))
 							}
 							paramIndex++
 							values = append(values, value)
@@ -329,9 +329,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 					}
 				}
 				if isNestedColumn {
-					conditions = append(conditions, fmt.Sprintf("(jsonb_path_match(%s, 'exists($.%s)') AND %s IS NULL)", c.nestedColumn, key, c.columnName(key, false)))
+					conditions = append(conditions, fmt.Sprintf("(jsonb_path_match(%s, 'exists($.%s)') AND %s IS NULL)", c.nestedColumn, key, c.columnName(key, true)))
 				} else {
-					conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", c.columnName(key, false)))
+					conditions = append(conditions, fmt.Sprintf("(%s IS NULL)", c.columnName(key, true)))
 				}
 			default:
 				// Prevent cryptic errors like:
@@ -341,9 +341,9 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 				}
 				if isNumeric(value) && c.isNestedColumn(key) {
 					// If the value is numeric and the column is a nested JSONB column, we need to cast the column to numeric.
-					conditions = append(conditions, fmt.Sprintf("((%s)::numeric = $%d)", c.columnName(key, false), paramIndex))
+					conditions = append(conditions, fmt.Sprintf("((%s)::numeric = $%d)", c.columnName(key, true), paramIndex))
 				} else {
-					conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key, false), paramIndex))
+					conditions = append(conditions, fmt.Sprintf("(%s = $%d)", c.columnName(key, true), paramIndex))
 				}
 				paramIndex++
 				values = append(values, value)
@@ -358,7 +358,7 @@ func (c *Converter) convertFilter(filter map[string]any, paramIndex int) (string
 	return result, values, nil
 }
 
-func (c *Converter) columnName(column string, raw bool) string {
+func (c *Converter) columnName(column string, jsonFieldAsText bool) string {
 	if column == c.placeholderName {
 		return fmt.Sprintf(`%q::text`, column)
 	}
@@ -370,10 +370,10 @@ func (c *Converter) columnName(column string, raw bool) string {
 			return fmt.Sprintf("%q", column)
 		}
 	}
-	if raw {
-		return fmt.Sprintf(`%q->'%s'`, c.nestedColumn, column)
+	if jsonFieldAsText {
+		return fmt.Sprintf(`%q->>'%s'`, c.nestedColumn, column)
 	}
-	return fmt.Sprintf(`%q->>'%s'`, c.nestedColumn, column)
+	return fmt.Sprintf(`%q->'%s'`, c.nestedColumn, column)
 }
 
 func (c *Converter) isColumnAllowed(column string) bool {
@@ -466,10 +466,10 @@ func (c *Converter) ConvertOrderBy(query []byte) (string, error) {
 		if c.isNestedColumn(key) {
 			// For JSONB fields, handle both numeric and text sorting.
 			// We need to use the raw JSONB reference for jsonb_typeof, but columnName() for the actual sorting
-			fieldClause = fmt.Sprintf("(CASE WHEN jsonb_typeof(%s) = 'number' THEN (%s)::numeric END) %s NULLS LAST, %s %s NULLS LAST", c.columnName(key, true), c.columnName(key, false), direction, c.columnName(key, false), direction)
+			fieldClause = fmt.Sprintf("(CASE WHEN jsonb_typeof(%s) = 'number' THEN (%s)::numeric END) %s NULLS LAST, %s %s NULLS LAST", c.columnName(key, false), c.columnName(key, true), direction, c.columnName(key, true), direction)
 		} else {
 			// Regular field.
-			fieldClause = fmt.Sprintf(`%s %s NULLS LAST`, c.columnName(key, false), direction)
+			fieldClause = fmt.Sprintf(`%s %s NULLS LAST`, c.columnName(key, true), direction)
 		}
 
 		parts = append(parts, fieldClause)

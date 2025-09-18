@@ -117,6 +117,9 @@ db.Query("SELECT * FROM games ORDER BY " + orderBy)
 - `1`: Ascending (ASC)
 - `-1`: Descending (DESC)
 
+### Return value
+The `ConvertOrderBy` method returns a string that can be directly used in an SQL ORDER BY clause. When the input is an empty object or `nil`, it returns an empty string. Keep in mind that the method does not add the `ORDER BY` keyword itself; you need to include it in your SQL query.
+
 ### JSONB Field Sorting:
 For JSONB fields, the package generates sophisticated ORDER BY clauses that handle both numeric and text sorting:
 
@@ -129,6 +132,14 @@ orderBy, err := converter.ConvertOrderBy(sortInput)
 
 This ensures proper sorting whether the JSONB field contains numeric or text values.
 
+> [!TIP]
+> Always add an `, id ASC` to your ORDER BY clause to ensure a consistent order (where `id` is your primary key).
+> ```go
+> if orderBy != "" {
+>   orderBy += ", "
+> }
+> orderBy += "id ASC"
+> ```
 
 ## Difference with MongoDB
 
