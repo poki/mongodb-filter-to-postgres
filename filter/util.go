@@ -1,5 +1,11 @@
 package filter
 
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+)
+
 func isNumeric(v any) bool {
 	// json.Unmarshal returns float64 for all numbers
 	// so we only need to check for float64.
@@ -70,4 +76,56 @@ func isValidPostgresIdentifier(s string) bool {
 	}
 
 	return true
+}
+
+func objectInOrder(b []byte) ([]struct {
+	Key   string
+	Value any
+}, error) {
+	dec := json.NewDecoder(bytes.NewReader(b))
+
+	// expect {
+	tok, err := dec.Token()
+	if err != nil {
+		return nil, err
+	}
+	if d, ok := tok.(json.Delim); !ok || d != '{' {
+		return nil, fmt.Errorf("expected object, got %v", tok)
+	}
+
+	var result []struct {
+		Key   string
+		Value any
+	}
+
+	for dec.More() {
+		// key
+		tok, err := dec.Token()
+		if err != nil {
+			return nil, err
+		}
+		key, ok := tok.(string)
+		if !ok {
+			return nil, fmt.Errorf("expected string key, got %v", tok)
+		}
+
+		// value
+		var v any
+		if err := dec.Decode(&v); err != nil {
+			return nil, err
+		}
+
+		result = append(result, struct {
+			Key   string
+			Value any
+		}{Key: key, Value: v})
+	}
+
+	// consume }
+	_, err = dec.Token()
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

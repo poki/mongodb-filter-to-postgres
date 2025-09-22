@@ -641,3 +641,134 @@ func TestConverter_AccessControl(t *testing.T) {
 	t.Run("nested but disallow password, disallow",
 		f(`{"password": "hacks"}`, no("password"), filter.WithNestedJSONB("meta", "created_at"), filter.WithDisallowColumns("password")))
 }
+
+func TestConverter_ConvertOrderBy(t *testing.T) {
+	tests := []struct {
+		name     string
+		options  []filter.Option
+		input    string
+		expected string
+		err      error
+	}{
+		{
+			"single field ascending",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"playerCount": 1}`,
+			`"playerCount" ASC NULLS LAST`,
+			nil,
+		},
+		{
+			"single field descending",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"playerCount": -1}`,
+			`"playerCount" DESC NULLS LAST`,
+			nil,
+		},
+		{
+			"multiple fields",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"playerCount": -1, "name": 1}`,
+			`"playerCount" DESC NULLS LAST, "name" ASC NULLS LAST`,
+			nil,
+		},
+		{
+			"nested JSONB single field ascending",
+			[]filter.Option{filter.WithNestedJSONB("customdata", "created_at")},
+			`{"map": 1}`,
+			`(CASE WHEN jsonb_typeof("customdata"->'map') = 'number' THEN ("customdata"->>'map')::numeric END) ASC NULLS LAST, "customdata"->>'map' ASC NULLS LAST`,
+			nil,
+		},
+		{
+			"nested JSONB single field descending",
+			[]filter.Option{filter.WithNestedJSONB("customdata", "created_at")},
+			`{"map": -1}`,
+			`(CASE WHEN jsonb_typeof("customdata"->'map') = 'number' THEN ("customdata"->>'map')::numeric END) DESC NULLS LAST, "customdata"->>'map' DESC NULLS LAST`,
+			nil,
+		},
+		{
+			"nested JSONB multiple fields",
+			[]filter.Option{filter.WithNestedJSONB("customdata", "created_at")},
+			`{"map": 1, "bar": -1}`,
+			`(CASE WHEN jsonb_typeof("customdata"->'map') = 'number' THEN ("customdata"->>'map')::numeric END) ASC NULLS LAST, "customdata"->>'map' ASC NULLS LAST, (CASE WHEN jsonb_typeof("customdata"->'bar') = 'number' THEN ("customdata"->>'bar')::numeric END) DESC NULLS LAST, "customdata"->>'bar' DESC NULLS LAST`,
+			nil,
+		},
+		{
+			"mixed nested and regular fields",
+			[]filter.Option{filter.WithNestedJSONB("customdata", "created_at")},
+			`{"created_at": 1, "map": -1}`,
+			`"created_at" ASC NULLS LAST, (CASE WHEN jsonb_typeof("customdata"->'map') = 'number' THEN ("customdata"->>'map')::numeric END) DESC NULLS LAST, "customdata"->>'map' DESC NULLS LAST`,
+			nil,
+		},
+		{
+			"field name with spaces",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"my_field": 1}`,
+			`"my_field" ASC NULLS LAST`,
+			nil,
+		},
+		{
+			"empty object",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{}`,
+			``,
+			nil,
+		},
+		{
+			"invalid field name for SQL injection",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"my field": 1}`,
+			``,
+			fmt.Errorf("invalid column name: my field"),
+		},
+		{
+			"invalid direction value",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"playerCount": 2}`,
+			``,
+			fmt.Errorf("invalid order direction for field playerCount: 2 (must be 1 or -1)"),
+		},
+		{
+			"invalid direction string",
+			[]filter.Option{filter.WithAllowAllColumns()},
+			`{"playerCount": "asc"}`,
+			``,
+			fmt.Errorf("invalid order direction for field playerCount: asc (must be 1 or -1)"),
+		},
+		{
+			"disallowed column",
+			[]filter.Option{filter.WithAllowColumns("name")},
+			`{"playerCount": 1}`,
+			``,
+			filter.ColumnNotAllowedError{Column: "playerCount"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			converter, err := filter.NewConverter(tt.options...)
+			if err != nil {
+				t.Fatalf("Failed to create converter: %v", err)
+			}
+
+			result, err := converter.ConvertOrderBy([]byte(tt.input))
+
+			if tt.err != nil {
+				if err == nil {
+					t.Fatalf("Expected error %v, got nil", tt.err)
+				}
+				if err.Error() != tt.err.Error() {
+					t.Errorf("Expected error %v, got %v", tt.err, err)
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("Unexpected error: %v", err)
+			}
+
+			if result != tt.expected {
+				t.Errorf("Expected %q, got %q", tt.expected, result)
+			}
+		})
+	}
+}
