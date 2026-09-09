@@ -19,7 +19,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v7
       with:
-        go-version: '1.25.9'
+        go-version: '1.27.1'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v7
     - run: go mod verify
@@ -31,7 +31,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v7
       with:
-        go-version: '1.25.9'
+        go-version: '1.27.1'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v7
     - run: go mod verify
@@ -44,7 +44,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v7
       with:
-        go-version: '1.25.9'
+        go-version: '1.27.1'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v7
     - run: go mod verify
@@ -61,7 +61,7 @@ jobs:
     steps:
     - uses: actions/setup-go@v7
       with:
-        go-version: '1.25.9'
+        go-version: '1.27.1'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v7
     - run: go vet ./...
@@ -78,17 +78,17 @@ jobs:
     steps:
     - uses: actions/setup-go@v7
       with:
-        go-version: '1.25.9'
+        go-version: '1.27.1'
         cache-dependency-path: "**/*.sum"
     - uses: actions/checkout@v7
     - uses: golangci/golangci-lint-action@v9.3.0
       with:
-        version: 'v2.10.1'
+        version: 'v2.13.2'
     - uses: golangci/golangci-lint-action@v9.3.0
       with:
         working-directory: 'fuzz'
-        version: 'v2.10.1'
+        version: 'v2.13.2'
     - uses: golangci/golangci-lint-action@v9.3.0
       with:
         working-directory: 'integration'
-        version: 'v2.10.1'
+        version: 'v2.13.2'
