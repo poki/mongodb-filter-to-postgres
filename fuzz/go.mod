@@ -2,7 +2,7 @@ module github.com/poki/mongodb-filter-to-postgres/fuzz
 
 go 1.22
 
-toolchain go1.25.9
+toolchain go1.27.4
 
 replace github.com/poki/mongodb-filter-to-postgres v0.0.0 => ../
 
