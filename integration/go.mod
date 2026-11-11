@@ -2,6 +2,8 @@ module github.com/poki/mongodb-filter-to-postgres/integration
 
 go 1.25.0
 
+toolchain go1.27.4
+
 replace github.com/poki/mongodb-filter-to-postgres v0.0.0 => ../
 
 require (
